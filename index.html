@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Physics AR Lab — คลังสื่อการสอนฟิสิกส์ AR</title>
+
+  <!-- Google Fonts: Prompt & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'sans-serif'],
+            display: ['Prompt', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+
+  <!-- ส่วนหัวเว็บไซต์ -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl shadow-sm">
+          ⚛️
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-lg sm:text-xl text-slate-900 leading-tight">
+            Physics <span class="text-blue-600">AR Lab</span>
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500">คลังสื่อการเรียนรู้ฟิสิกส์แบบโต้ตอบและ AR</p>
+        </div>
+      </div>
+      <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-display font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        รองรับ iOS &amp; Android
+      </span>
+    </div>
+  </header>
+
+  <!-- เนื้อหาหลัก -->
+  <main class="max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1 space-y-6">
+
+    <!-- กล่องแนะนำสำหรับนักเรียน iOS -->
+    <div class="rounded-2xl bg-blue-50/80 border border-blue-200 p-4 flex items-start gap-3 text-sm text-blue-950">
+      <span class="text-xl shrink-0">📱</span>
+      <div>
+        <p class="font-display font-semibold text-blue-900">คำแนะนำการใช้งานโหมดกล้อง AR บนมือถือ</p>
+        <p class="text-xs sm:text-sm text-blue-800 mt-0.5 leading-relaxed">
+          สำหรับนักเรียนที่ใช้ <b>iPhone / iPad (iOS)</b> แนะนำให้เปิดผ่านแอป <b>Safari</b> โดยตรง (หากกดลิงก์จาก LINE ให้แตะจุดสามจุดมุมขวาล่างแล้วเลือก <i>"เปิดใน Safari"</i>) เพื่อเปิดใช้งานกล้อง AR ได้เต็มรูปแบบครับ
+        </p>
+      </div>
+    </div>
+
+    <!-- หัวข้อรายการสื่อ -->
+    <div>
+      <h2 class="font-display font-bold text-base sm:text-lg text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-2 h-6 rounded-full bg-blue-600"></span>
+        เลือกบทเรียนที่ต้องการทดลอง
+      </h2>
+
+      <!-- ตารางการ์ดสื่อ AR -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+
+        <!-- การ์ดที่ 1: OptiLab AR 2.0 -->
+        <a href="./optilab_ar_2_0.html"
+           class="group bg-white rounded-2xl border border-slate-200 hover:border-blue-400 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between gap-4">
+          <div class="space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform">
+                🔍
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-display font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                แสงเชิงรังสี • ม.ปลาย
+              </span>
+            </div>
+            <div>
+              <h3 class="font-display font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors">
+                OptiLab AR 2.0
+              </h3>
+              <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+                เรื่อง <b>กระจกโค้งและเลนส์บาง</b> — ฝึกวาดทางเดินแสงด้วยมือ คำนวณสมการ และทำภารกิจระบบทัศนอุปกรณ์คู่พร้อมใบรับรองส่งครู
+              </p>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-sm font-display font-semibold text-blue-600">
+            <span>เข้าสู่ห้องทดลอง AR</span>
+            <span class="group-hover:translate-x-1 transition-transform">→</span>
+          </div>
+        </a>
+
+        <!-- การ์ดที่ 2: Sound Wave X-Ray AR v2 -->
+        <a href="./sound_wave_x_ray_ar_v2_h_h_stem.html"
+           class="group bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between gap-4">
+          <div class="space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform">
+                🔊
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-display font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                เสียง • H&amp;H+STEM ม.5
+              </span>
+            </div>
+            <div>
+              <h3 class="font-display font-bold text-lg text-slate-900 group-hover:text-emerald-600 transition-colors">
+                Sound Wave X-Ray AR v2
+              </h3>
+              <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+                เรื่อง <b>การสั่นพ้องของเสียง</b> — จำลองหลอดเรโซแนนซ์ ท่อปลายเปิด–ปิด พร้อมเสียงจำลองและ AR ทาบท่อ PVC จริง
+              </p>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-sm font-display font-semibold text-emerald-600">
+            <span>เข้าสู่ห้องทดลอง AR</span>
+            <span class="group-hover:translate-x-1 transition-transform">→</span>
+          </div>
+        </a>
+
+        <!-- =======================================================
+             หากอนาคตต้องการเพิ่มสื่อ AR เรื่องใหม่ ให้คัดลอกแท็ก <a> ด้านบน
+             มาวางต่อตรงนี้ แล้วเปลี่ยนชื่อไฟล์ตรง href="./ชื่อไฟล์ใหม่.html"
+             ======================================================= -->
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ส่วนท้ายเว็บไซต์ -->
+  <footer class="max-w-5xl w-full mx-auto px-4 py-5 text-center text-xs text-slate-400 border-t border-slate-200/70">
+    Physics AR Lab • สื่อการสอนฟิสิกส์เพื่อการศึกษา
+  </footer>
+
+</body>
+</html>

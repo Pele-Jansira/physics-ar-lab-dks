@@ -1,0 +1,2493 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OptiLab AR 2.0 — สื่อการสอนฟิสิกส์ กระจกโค้งและเลนส์บาง (สสวท.)</title>
+
+  <!-- Google Fonts: Prompt & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'Prompt', 'sans-serif'],
+            display: ['Prompt', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      font-family: 'Sarabun', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    h1, h2, h3, .font-display {
+      font-family: 'Prompt', sans-serif;
+    }
+    #opticsCanvas {
+      touch-action: none;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .math-eq {
+      font-family: 'Sarabun', serif;
+      font-size: 1.03rem;
+      line-height: 1.85;
+    }
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 3px;
+      line-height: 1.15;
+    }
+    .frac .num {
+      border-bottom: 1.5px solid currentColor;
+      padding: 0 4px 1px;
+      font-weight: 600;
+    }
+    .frac .den {
+      padding: 1px 4px 0;
+      font-weight: 600;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      border-radius: 999px;
+      background: #E2E8F0;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #2563EB;
+      border: 3px solid #FFFFFF;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #2563EB;
+      border: 3px solid #FFFFFF;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+      cursor: pointer;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .animate-shake {
+      animation: shake 0.36s ease-in-out;
+    }
+    .drag-ghost {
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(1.06);
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+
+  <!-- ==================== TOP BAR: BRAND, TEACHER MODE & AR ==================== -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3C9.5 7 9.5 17 12 21C14.5 17 14.5 7 12 3Z" fill="rgba(255,255,255,0.28)"/>
+            <line x1="2" y1="8" x2="11" y2="8" stroke-linecap="round"/>
+            <line x1="13" y1="8" x2="22" y2="14" stroke-linecap="round"/>
+            <line x1="2" y1="16" x2="11" y2="16" stroke-linecap="round"/>
+            <line x1="13" y1="16" x2="22" y2="10" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-base sm:text-lg text-slate-900 leading-tight">
+            OptiLab <span class="text-blue-600">AR</span>
+            <span class="ml-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">2.0</span>
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 leading-tight">กระจกโค้งและเลนส์บาง • ฟิสิกส์ ม.ปลาย (สสวท.)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- ปุ่มโหมดครูสำหรับปลดล็อกทุกด่าน -->
+        <button id="teacherModeBtn" type="button"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-display font-semibold transition-all border border-slate-200 bg-slate-50 text-slate-600 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-800 active:scale-95">
+          <span>👩‍🏫</span>
+          <span id="teacherModeLabel">โหมดครู (ปลดล็อก)</span>
+        </button>
+
+        <!-- ปุ่มเปิด/ปิดกล้อง AR -->
+        <button id="arToggleBtn" type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-display font-semibold transition-all shadow-sm border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 active:scale-95">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <span id="arToggleLabel">โหมด AR</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- แถบปรับความทึบฉากขาวเมื่อเปิด AR -->
+    <div id="arControlsBar" class="hidden bg-blue-50/95 border-t border-blue-100 px-3 sm:px-6 py-2">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+        <div class="flex items-center gap-2 text-blue-900 font-medium">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>กำลังเปิดกล้อง AR — ส่องไปที่โต๊ะเรียนเพื่อวางรางแสงเสมือน</span>
+        </div>
+        <div class="flex items-center gap-2.5 w-full sm:w-auto">
+          <label for="arOpacitySlider" class="text-slate-700 whitespace-nowrap font-medium">ความทึบฉากขาว:</label>
+          <input id="arOpacitySlider" type="range" min="0" max="100" value="38" class="w-32 sm:w-40" />
+          <span id="arOpacityVal" class="font-semibold text-blue-700 w-10 text-right">38%</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== TOAST NOTIFICATION (แทน alert) ==================== -->
+  <div id="toastBox" class="hidden max-w-7xl w-full mx-auto px-3 sm:px-6 pt-3">
+    <div id="toastInner" class="rounded-xl border px-4 py-2.5 text-sm flex items-start justify-between gap-3 shadow-sm">
+      <div class="flex items-start gap-2.5">
+        <span id="toastIcon" class="text-base leading-none mt-0.5">⚠️</span>
+        <p id="toastMessage" class="leading-relaxed font-medium"></p>
+      </div>
+      <button id="toastClose" type="button" class="text-slate-500 hover:text-slate-800 px-1.5 py-0.5 rounded-lg">✕</button>
+    </div>
+  </div>
+
+  <!-- ==================== 3-STAGE NAVIGATION TABS ==================== -->
+  <nav class="max-w-7xl w-full mx-auto px-3 sm:px-6 pt-3">
+    <div class="grid grid-cols-3 gap-1.5 sm:gap-2.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
+      <button data-stage="1" class="stage-tab flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 px-2 rounded-xl font-display font-semibold text-xs sm:text-sm transition-all">
+        <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tab-badge">1</span>
+        <span class="text-center leading-tight">วาดทางเดินแสง</span>
+      </button>
+      <button data-stage="2" class="stage-tab flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 px-2 rounded-xl font-display font-semibold text-xs sm:text-sm transition-all">
+        <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tab-badge">2</span>
+        <span class="text-center leading-tight">สมการ &amp; ภารกิจ <span id="tabS2Prog" class="text-[11px] opacity-85">(0/3)</span></span>
+      </button>
+      <button data-stage="3" id="stage3TabBtn" class="stage-tab flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 px-2 rounded-xl font-display font-semibold text-xs sm:text-sm transition-all">
+        <span id="tabS3Icon" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tab-badge">🔒</span>
+        <span class="text-center leading-tight">ระบบคู่ &amp; ภารกิจ <span id="tabS3Prog" class="text-[11px] opacity-85">(0/3)</span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== MAIN WORKSPACE ==================== -->
+  <main class="max-w-7xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-4 flex-1 space-y-4">
+
+    <!-- ==================== STAGE 3 DRAG-TO-PLACE PALETTE (แสดงเฉพาะด่าน 3 โหมดทดลอง) ==================== -->
+    <section id="s3PaletteBar" class="hidden bg-white rounded-2xl border border-indigo-200 shadow-sm p-3">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div class="flex items-center gap-2 text-xs sm:text-sm font-display font-semibold text-indigo-900">
+          <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs">ลากวางได้</span>
+          <span>ลากอุปกรณ์ด้านล่างไปวางบนแกนมุขสำคัญ (ซ้าย = อุปกรณ์ 1, ขวา = อุปกรณ์ 2) หรือแตะเลือกช่อง</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-xs">
+          <span class="text-slate-500">แตะใส่ช่อง:</span>
+          <button id="slotTarget1" type="button" class="px-2.5 py-1 rounded-lg font-display font-semibold bg-blue-600 text-white">ช่อง 1</button>
+          <button id="slotTarget2" type="button" class="px-2.5 py-1 rounded-lg font-display font-semibold bg-slate-100 text-slate-600">ช่อง 2</button>
+        </div>
+      </div>
+      <div id="paletteChips" class="flex flex-wrap gap-2">
+        <!-- เติมปุ่มลากวางด้วย JS -->
+      </div>
+    </section>
+
+    <!-- ==================== INTERACTIVE AR CANVAS SECTION ==================== -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <!-- แถบคำแนะนำการวาด / สถานะบน Canvas -->
+      <div id="drawBanner" class="hidden px-3.5 py-2.5 bg-gradient-to-r from-amber-50 via-blue-50 to-indigo-50 border-b border-blue-100 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2 text-xs sm:text-sm text-slate-800">
+          <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-display font-bold text-xs flex items-center justify-center shrink-0" id="drawStepNum">1</span>
+          <span id="drawInstructionText" class="font-medium"></span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="toggleGuideBtn" type="button"
+            class="px-2.5 py-1.5 rounded-lg text-xs font-display font-semibold bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 active:scale-95">
+            💡 ตัวช่วยลาก: เปิด
+          </button>
+          <button id="resetDrawBtn" type="button"
+            class="px-3 py-1.5 rounded-lg text-xs font-display font-semibold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 active:scale-95">
+            🔄 เริ่มวาดใหม่
+          </button>
+        </div>
+      </div>
+
+      <!-- แถบเครื่องมือด้านบน Canvas -->
+      <div class="px-3.5 py-2 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs text-slate-600">
+          <span id="canvasModeChip" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-display font-semibold">
+            ✏️ โหมดฝึกวาดทางเดินแสง
+          </span>
+          <span id="canvasHintText" class="hidden sm:inline">ใช้นิ้วลากจากจุดเริ่มต้นไปยังวงกลมเป้าหมาย</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="zoomOutBtn" type="button" class="w-8 h-8 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center active:scale-95">−</button>
+          <button id="zoomResetBtn" type="button" class="px-2.5 h-8 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold active:scale-95">100%</button>
+          <button id="zoomInBtn" type="button" class="w-8 h-8 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center active:scale-95">+</button>
+        </div>
+      </div>
+
+      <!-- พื้นที่กล้อง AR + Canvas -->
+      <div id="canvasContainer" class="relative w-full h-[340px] sm:h-[410px] lg:h-[440px] bg-white overflow-hidden select-none">
+        <video id="arVideo" autoplay playsinline muted class="hidden absolute inset-0 w-full h-full object-cover"></video>
+        <div id="arBackdropTint" class="hidden absolute inset-0 pointer-events-none" style="background: rgba(255,255,255,0.38);"></div>
+        <canvas id="opticsCanvas" class="relative z-10"></canvas>
+        <div id="canvasOverlayBadge" class="absolute top-2.5 left-2.5 z-20 pointer-events-none flex flex-wrap gap-1.5"></div>
+      </div>
+
+      <!-- แถบ Stepper สำหรับด่านที่ 3 (โหมดทดลองอิสระ) -->
+      <div id="s3StepperBar" class="hidden px-3.5 py-2.5 border-t border-slate-100 bg-indigo-50/60 flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs font-display font-semibold text-indigo-900">ดูทางเดินแสงทีละขั้น:</span>
+        <div class="flex flex-wrap gap-1.5">
+          <button data-s3step="1" class="s3-step-btn px-3 py-1.5 rounded-lg text-xs font-display font-semibold border transition active:scale-95">ขั้นที่ 1: อุปกรณ์ 1 → I₁</button>
+          <button data-s3step="2" class="s3-step-btn px-3 py-1.5 rounded-lg text-xs font-display font-semibold border transition active:scale-95">ขั้นที่ 2: หา s₂ = d − s'₁</button>
+          <button data-s3step="3" class="s3-step-btn px-3 py-1.5 rounded-lg text-xs font-display font-semibold border transition active:scale-95">ขั้นที่ 3: อุปกรณ์ 2 → ภาพสุดท้าย I₂</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STAGE 1 PANEL: วาดทางเดินแสงเอง ==================== -->
+    <section id="panelStage1" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <!-- สลับโหมดฝึกวาดเอง vs ดูอัตโนมัติ -->
+        <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
+          <button id="s1ModeDrawBtn" type="button" class="py-2 px-2 rounded-lg text-xs sm:text-sm font-display font-semibold transition">✏️ โหมดฝึกวาดเอง</button>
+          <button id="s1ModeAutoBtn" type="button" class="py-2 px-2 rounded-lg text-xs sm:text-sm font-display font-semibold transition">⚡ โหมดดูอัตโนมัติ</button>
+        </div>
+
+        <!-- ความคืบหน้าการวาดครบ 5 อุปกรณ์ -->
+        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-50/70 border border-emerald-100 text-xs">
+          <span class="font-display font-semibold text-emerald-800">ความคืบหน้าการวาดทางเดินแสง:</span>
+          <span id="s1CompletedCount" class="font-display font-bold text-emerald-700 bg-white px-2.5 py-0.5 rounded-full border border-emerald-200">0/5 อุปกรณ์</span>
+        </div>
+
+        <!-- เลือกอุปกรณ์ 5 ชนิด -->
+        <div>
+          <h2 class="font-display font-semibold text-sm text-slate-800 mb-2 flex items-center gap-2">
+            <span class="w-2 h-5 rounded-full bg-blue-600"></span>
+            เลือกทัศนอุปกรณ์ (5 ชนิด)
+          </h2>
+          <div id="stage1DeviceGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2"></div>
+        </div>
+
+        <hr class="border-slate-100" />
+
+        <!-- สไลเดอร์ปรับระยะ -->
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-xs sm:text-sm mb-1">
+              <label class="font-medium text-slate-700">ระยะวัตถุ (<span class="italic font-semibold">s</span>)</label>
+              <span id="s1_s_val" class="font-display font-bold text-blue-700">30 cm</span>
+            </div>
+            <input id="s1_s_slider" type="range" min="5" max="55" step="0.5" value="30" class="w-full" />
+          </div>
+          <div id="s1_f_group">
+            <div class="flex justify-between text-xs sm:text-sm mb-1">
+              <label class="font-medium text-slate-700">ความยาวโฟกัส (<span class="italic font-semibold">|f|</span>)</label>
+              <span id="s1_f_val" class="font-display font-bold text-emerald-700">15 cm</span>
+            </div>
+            <input id="s1_f_slider" type="range" min="8" max="28" step="0.5" value="15" class="w-full" />
+          </div>
+        </div>
+
+        <!-- ปุ่มตำแหน่งสำคัญ -->
+        <div id="s1_quickZones">
+          <p class="text-xs font-medium text-slate-500 mb-1.5">วางวัตถุที่ตำแหน่งสำคัญ:</p>
+          <div class="flex flex-wrap gap-1.5">
+            <button data-zone="gt2f" class="zone-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-700">s &gt; 2f</button>
+            <button data-zone="eq2f" class="zone-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-700">s = 2f</button>
+            <button data-zone="btwf2f" class="zone-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-700">f &lt; s &lt; 2f</button>
+            <button data-zone="eqf" class="zone-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-700">s = f</button>
+            <button data-zone="ltf" class="zone-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-700">s &lt; f</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ฝั่งขวา: กล่องสรุปจุดตัดและการเกิดภาพ -->
+      <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-display font-semibold text-base text-slate-900 flex items-center gap-2">
+              <span class="w-2 h-5 rounded-full bg-emerald-500"></span>
+              ผลการเกิดภาพและจุดตัดของรังสี
+            </h2>
+            <span id="s1_zoneTag" class="px-2.5 py-1 rounded-full text-xs font-display font-semibold bg-blue-50 text-blue-700 border border-blue-100"></span>
+          </div>
+
+          <!-- ข้อความเมื่อยังวาดไม่เสร็จ -->
+          <div id="s1_pendingBox" class="hidden rounded-xl bg-amber-50/80 border border-amber-200 p-4 text-sm text-amber-900">
+            <p class="font-display font-bold mb-1">🎯 ลากเส้นทางเดินแสงให้ครบ 2 รังสี (4 ขั้นตอน) เพื่อค้นหาจุดตัดของภาพ!</p>
+            <p class="text-xs sm:text-sm text-amber-800">ใช้นิ้วหรือเมาส์ลากจากจุดเริ่มต้นสีน้ำเงินไปยังวงกลมเป้าหมายที่กะพริบอยู่บนภาพ เมื่อลากครบทั้ง 2 เส้น ระบบจะแสดงจุดตัดและลักษณะภาพที่เกิดขึ้นให้ทันที</p>
+          </div>
+
+          <!-- กล่องแสดงคุณสมบัติ 4 ช่อง (แสดงเมื่อวาดครบ หรืออยู่ในโหมด Auto) -->
+          <div id="s1_resultBox" class="space-y-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div class="rounded-xl p-2.5 bg-slate-50 border border-slate-100">
+                <p class="text-[11px] text-slate-500">ชนิดภาพ</p>
+                <p id="s1_propType" class="font-display font-bold text-sm text-slate-900 mt-0.5">-</p>
+              </div>
+              <div class="rounded-xl p-2.5 bg-slate-50 border border-slate-100">
+                <p class="text-[11px] text-slate-500">ลักษณะหัว</p>
+                <p id="s1_propOrient" class="font-display font-bold text-sm text-slate-900 mt-0.5">-</p>
+              </div>
+              <div class="rounded-xl p-2.5 bg-slate-50 border border-slate-100">
+                <p class="text-[11px] text-slate-500">ขนาดเทียบวัตถุ</p>
+                <p id="s1_propSize" class="font-display font-bold text-sm text-slate-900 mt-0.5">-</p>
+              </div>
+              <div class="rounded-xl p-2.5 bg-slate-50 border border-slate-100">
+                <p class="text-[11px] text-slate-500">ตำแหน่งภาพ</p>
+                <p id="s1_propPos" class="font-display font-bold text-sm text-slate-900 mt-0.5">-</p>
+              </div>
+            </div>
+            <div class="rounded-xl bg-blue-50/70 border border-blue-100 p-3.5 text-sm text-slate-800 leading-relaxed" id="s1_explainText"></div>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div class="flex items-center gap-2 bg-red-50/70 border border-red-100 rounded-lg px-2.5 py-2">
+            <span class="w-4 h-1 rounded bg-red-500 shrink-0"></span>
+            <span class="text-slate-700"><b>รังสีที่ 1 (แดง):</b> ขนานแกน → สะท้อน/หักเหผ่านแนวจุดโฟกัส F</span>
+          </div>
+          <div class="flex items-center gap-2 bg-blue-50/70 border border-blue-100 rounded-lg px-2.5 py-2">
+            <span class="w-4 h-1 rounded bg-blue-600 shrink-0"></span>
+            <span class="text-slate-700"><b>รังสีที่ 2 (น้ำเงิน):</b> ผ่านจุดยอด V (สะท้อนมุมเท่า) หรือจุดกึ่งกลางเลนส์ O</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STAGE 2 PANEL: สมการ & ภารกิจ 3 ข้อ ==================== -->
+    <section id="panelStage2" class="hidden space-y-4">
+      <!-- Sub-tabs -->
+      <div class="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 gap-2">
+        <button id="s2SubExplore" type="button" class="py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition">🧪 โหมดทดลองและดูสูตร</button>
+        <button id="s2SubMission" type="button" class="py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition">🎯 โหมดภารกิจคำนวณ (<span id="s2MissionBadge">0/3</span> ข้อ)</button>
+      </div>
+
+      <!-- Stage 2A: Explore Mode -->
+      <div id="s2ExploreView" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-5 space-y-4">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+            <h2 class="font-display font-semibold text-sm text-slate-800 flex items-center gap-2">
+              <span class="w-2 h-5 rounded-full bg-blue-600"></span>
+              กำหนดค่าตัวแปรของอุปกรณ์
+            </h2>
+            <div id="stage2DeviceGrid" class="grid grid-cols-2 gap-2"></div>
+            <div class="space-y-3 pt-1">
+              <div id="s2_f_group">
+                <div class="flex justify-between text-xs sm:text-sm mb-1">
+                  <label class="font-medium text-slate-700">ความยาวโฟกัส (<span class="italic font-semibold">f</span>)</label>
+                  <span id="s2_f_val" class="font-display font-bold text-blue-700">+15 cm</span>
+                </div>
+                <input id="s2_f_slider" type="range" min="6" max="30" step="0.5" value="15" class="w-full" />
+              </div>
+              <div id="s2_R_group">
+                <div class="flex justify-between text-xs sm:text-sm mb-1">
+                  <label class="font-medium text-slate-700">รัศมีความโค้ง (<span class="italic font-semibold">R = 2f</span>)</label>
+                  <span id="s2_R_val" class="font-display font-bold text-indigo-700">+30 cm</span>
+                </div>
+                <input id="s2_R_slider" type="range" min="12" max="60" step="1" value="30" class="w-full" />
+              </div>
+              <div>
+                <div class="flex justify-between text-xs sm:text-sm mb-1">
+                  <label class="font-medium text-slate-700">ระยะวัตถุ (<span class="italic font-semibold">s</span>)</label>
+                  <span id="s2_s_val" class="font-display font-bold text-slate-900">25 cm</span>
+                </div>
+                <input id="s2_s_slider" type="range" min="5" max="55" step="0.5" value="25" class="w-full" />
+              </div>
+              <div>
+                <div class="flex justify-between text-xs sm:text-sm mb-1">
+                  <label class="font-medium text-slate-700">ความสูงวัตถุ (<span class="italic font-semibold">y</span>)</label>
+                  <span id="s2_y_val" class="font-display font-bold text-slate-900">8 cm</span>
+                </div>
+                <input id="s2_y_slider" type="range" min="3" max="14" step="0.5" value="8" class="w-full" />
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <h3 class="font-display font-semibold text-sm text-slate-800 mb-2 flex items-center gap-2">
+              <span class="w-2 h-5 rounded-full bg-amber-500"></span>
+              หลักการใช้เครื่องหมาย (+ / −) สสวท.
+            </h3>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                <p class="font-bold text-emerald-800">เครื่องหมายบวก (+)</p>
+                <ul class="mt-1 space-y-0.5 text-slate-700">
+                  <li>• <b>f &gt; 0</b> : กระจกเว้า, เลนส์นูน</li>
+                  <li>• <b>s' &gt; 0</b> : ภาพจริง หัวกลับ</li>
+                </ul>
+              </div>
+              <div class="p-2.5 rounded-xl bg-rose-50/70 border border-rose-100">
+                <p class="font-bold text-rose-800">เครื่องหมายลบ (−)</p>
+                <ul class="mt-1 space-y-0.5 text-slate-700">
+                  <li>• <b>f &lt; 0</b> : กระจกนูน, เลนส์เว้า</li>
+                  <li>• <b>s' &lt; 0</b> : ภาพเสมือน หัวตั้ง</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-display font-semibold text-base text-slate-900 flex items-center gap-2">
+              <span class="w-2 h-5 rounded-full bg-indigo-600"></span>
+              แทนค่าสูตรแบบเรียลไทม์
+            </h2>
+            <span id="s2_resultBadge" class="px-3 py-1 rounded-full text-xs font-display font-semibold"></span>
+          </div>
+          <div class="grid grid-cols-3 gap-2.5">
+            <div class="rounded-xl bg-blue-50/70 border border-blue-100 p-3 text-center">
+              <p class="text-xs text-slate-500">ระยะภาพ (s')</p>
+              <p id="s2_out_sp" class="font-display font-bold text-lg text-blue-700 mt-0.5">-</p>
+            </div>
+            <div class="rounded-xl bg-purple-50/70 border border-purple-100 p-3 text-center">
+              <p class="text-xs text-slate-500">กำลังขยาย (m)</p>
+              <p id="s2_out_m" class="font-display font-bold text-lg text-purple-700 mt-0.5">-</p>
+            </div>
+            <div class="rounded-xl bg-emerald-50/70 border border-emerald-100 p-3 text-center">
+              <p class="text-xs text-slate-500">ขนาดภาพ (|y'|)</p>
+              <p id="s2_out_yp" class="font-display font-bold text-lg text-emerald-700 mt-0.5">-</p>
+            </div>
+          </div>
+          <div id="s2_stepsContainer" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- Stage 2B: Mission Mode (3 Randomized Questions) -->
+      <div id="s2MissionView" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span id="s2mStepTag" class="px-3 py-1 rounded-full text-xs font-display font-bold bg-indigo-100 text-indigo-700">ภารกิจข้อที่ 1 / 3</span>
+            <h2 class="font-display font-bold text-base sm:text-lg text-slate-900 mt-1.5">คำนวณหาระยะภาพ กำลังขยาย และชนิดของภาพ</h2>
+          </div>
+          <button id="s2mRerollBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-display font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95">
+            🎲 สุ่มโจทย์ใหม่
+          </button>
+        </div>
+
+        <!-- โจทย์ปัญหา -->
+        <div id="s2mProblemText" class="rounded-xl bg-blue-50/80 border border-blue-200 p-4 text-sm sm:text-base text-slate-800 leading-relaxed"></div>
+
+        <!-- คำใบ้แบบพับได้ -->
+        <div>
+          <button id="s2mHintToggle" type="button" class="text-xs sm:text-sm font-display font-semibold text-amber-700 hover:text-amber-800 inline-flex items-center gap-1.5">
+            <span>💡 ดูคำใบ้ / ตัวอย่างวิธีคิด</span>
+          </button>
+          <div id="s2mHintBox" class="hidden mt-2 rounded-xl bg-amber-50/80 border border-amber-200 p-3.5 text-xs sm:text-sm text-amber-950 space-y-1 math-eq"></div>
+        </div>
+
+        <!-- ฟอร์มกรอกคำตอบ -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="s2m_sp" class="block text-xs font-display font-semibold text-slate-700 mb-1">1. ระยะภาพ s' (ซม.) <span class="text-rose-600">*ใส่เครื่องหมาย − ถ้าเป็นภาพเสมือน</span></label>
+            <input id="s2m_sp" type="number" step="any" placeholder="เช่น 30 หรือ -12" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label for="s2m_m" class="block text-xs font-display font-semibold text-slate-700 mb-1">2. ขนาดกำลังขยาย |m| (เท่า)</label>
+            <input id="s2m_m" type="number" step="any" placeholder="เช่น 1.5 หรือ 0.5" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <span class="block text-xs font-display font-semibold text-slate-700 mb-1">3. ชนิดของภาพที่เกิด</span>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button type="button" data-imgtype="real" class="s2m-type-btn py-2.5 px-2 rounded-xl border text-xs font-display font-semibold transition">ภาพจริง หัวกลับ</button>
+              <button type="button" data-imgtype="virtual" class="s2m-type-btn py-2.5 px-2 rounded-xl border text-xs font-display font-semibold transition">ภาพเสมือน หัวตั้ง</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="s2mFeedback" class="hidden rounded-xl p-3.5 text-sm font-medium"></div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div class="flex items-center gap-1.5" id="s2mDots"></div>
+          <div class="flex items-center gap-2">
+            <button id="s2mCheckBtn" type="button" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-display font-semibold text-sm shadow-sm active:scale-95">
+              ตรวจคำตอบ ✓
+            </button>
+            <button id="s2mNextBtn" type="button" class="hidden px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-display font-semibold text-sm shadow-sm active:scale-95">
+              ข้อถัดไป →
+            </button>
+            <button id="s2mGoStage3Btn" type="button" class="hidden px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-display font-semibold text-sm shadow-sm active:scale-95">
+              🔓 ไปด่านที่ 3 เลย →
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STAGE 3 PANEL: ระบบคู่ & ภารกิจ 3 ข้อ ==================== -->
+    <section id="panelStage3" class="hidden space-y-4">
+      <!-- Sub-tabs -->
+      <div class="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 gap-2">
+        <button id="s3SubExplore" type="button" class="py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition">🔬 โหมดทดลองระบบคู่ (อิสระ)</button>
+        <button id="s3SubMission" type="button" class="py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition">🏆 โหมดภารกิจระบบคู่ (<span id="s3MissionBadge">0/3</span> ข้อ)</button>
+      </div>
+
+      <!-- Stage 3A: Explore Mode -->
+      <div id="s3ExploreView" class="space-y-4">
+        <!-- 6 โจทย์ตัวอย่างข้อสอบไทย -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4">
+          <h2 class="font-display font-semibold text-sm text-slate-800 mb-2.5 flex items-center gap-2">
+            <span class="w-2 h-5 rounded-full bg-purple-600"></span>
+            ชุดโจทย์ตัวอย่างระบบคู่ (ครบทุกคู่เลนส์-กระจก)
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <button data-preset="ll" class="preset-btn text-left p-2.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/60 transition">
+              <p class="font-display font-semibold text-xs text-blue-700">เลนส์นูน + เลนส์นูน</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">ภาพจริงเป็นวัตถุจริง</p>
+            </button>
+            <button data-preset="lv_virt" class="preset-btn text-left p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/60 transition">
+              <p class="font-display font-semibold text-xs text-amber-700">เลนส์นูน + เลนส์เว้า</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">วัตถุเสมือน (s₂ &lt; 0)</p>
+            </button>
+            <button data-preset="l_cm" class="preset-btn text-left p-2.5 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/60 transition">
+              <p class="font-display font-semibold text-xs text-indigo-700">เลนส์นูน + กระจกเว้า</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">ผ่านเลนส์สะท้อนเว้า</p>
+            </button>
+            <button data-preset="l_xm" class="preset-btn text-left p-2.5 rounded-xl border border-slate-200 hover:border-cyan-400 hover:bg-cyan-50/60 transition">
+              <p class="font-display font-semibold text-xs text-cyan-700">เลนส์นูน + กระจกนูน</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">ผ่านเลนส์สะท้อนนูน</p>
+            </button>
+            <button data-preset="l_pm" class="preset-btn text-left p-2.5 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/60 transition">
+              <p class="font-display font-semibold text-xs text-emerald-700">เลนส์นูน + กระจกราบ</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">สะท้อนกระจกเงาราบ</p>
+            </button>
+            <button data-preset="mm" class="preset-btn text-left p-2.5 rounded-xl border border-slate-200 hover:border-purple-400 hover:bg-purple-50/60 transition">
+              <p class="font-display font-semibold text-xs text-purple-700">กระจกเว้า + กระจกนูน</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">ระบบกระจกโค้งคู่</p>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3.5">
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label for="s3_el1" class="block text-xs font-display font-semibold text-blue-700 mb-1">อุปกรณ์ที่ 1</label>
+                <select id="s3_el1" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-2.5 py-2 text-xs font-semibold">
+                  <option value="convex_lens">เลนส์นูน (f₁ &gt; 0)</option>
+                  <option value="concave_lens">เลนส์เว้า (f₁ &lt; 0)</option>
+                  <option value="concave_mirror">กระจกเว้า (f₁ &gt; 0)</option>
+                  <option value="convex_mirror">กระจกนูน (f₁ &lt; 0)</option>
+                  <option value="plane_mirror">กระจกเงาราบ (f₁ = ∞)</option>
+                </select>
+              </div>
+              <div>
+                <label for="s3_el2" class="block text-xs font-display font-semibold text-purple-700 mb-1">อุปกรณ์ที่ 2</label>
+                <select id="s3_el2" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-2.5 py-2 text-xs font-semibold">
+                  <option value="convex_lens">เลนส์นูน (f₂ &gt; 0)</option>
+                  <option value="concave_lens">เลนส์เว้า (f₂ &lt; 0)</option>
+                  <option value="concave_mirror">กระจกเว้า (f₂ &gt; 0)</option>
+                  <option value="convex_mirror">กระจกนูน (f₂ &lt; 0)</option>
+                  <option value="plane_mirror">กระจกเงาราบ (f₂ = ∞)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="space-y-2.5">
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label class="font-medium text-slate-700">ระยะวัตถุ (s₁)</label>
+                  <span id="s3_s1_val" class="font-display font-bold text-blue-700">25 cm</span>
+                </div>
+                <input id="s3_s1_slider" type="range" min="6" max="55" step="0.5" value="25" class="w-full" />
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <label class="font-medium text-slate-700">ระยะห่างอุปกรณ์ (d)</label>
+                  <span id="s3_d_val" class="font-display font-bold text-slate-900">50 cm</span>
+                </div>
+                <input id="s3_d_slider" type="range" min="15" max="80" step="0.5" value="50" class="w-full" />
+              </div>
+              <div id="s3_f1_group">
+                <div class="flex justify-between text-xs mb-1">
+                  <label class="font-medium text-slate-700">โฟกัสอุปกรณ์ 1 (f₁)</label>
+                  <span id="s3_f1_val" class="font-display font-bold text-blue-600">+15 cm</span>
+                </div>
+                <input id="s3_f1_slider" type="range" min="6" max="30" step="0.5" value="15" class="w-full" />
+              </div>
+              <div id="s3_f2_group">
+                <div class="flex justify-between text-xs mb-1">
+                  <label class="font-medium text-slate-700">โฟกัสอุปกรณ์ 2 (f₂)</label>
+                  <span id="s3_f2_val" class="font-display font-bold text-purple-600">+15 cm</span>
+                </div>
+                <input id="s3_f2_slider" type="range" min="6" max="30" step="0.5" value="15" class="w-full" />
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 class="font-display font-semibold text-base text-slate-900 flex items-center gap-2">
+                <span class="w-2 h-5 rounded-full bg-purple-600"></span>
+                วิธีคำนวณระบบอุปกรณ์คู่ (ทีละขั้น)
+              </h2>
+              <span id="s3_virtualObjBadge" class="hidden px-2.5 py-1 rounded-full text-xs font-display font-bold bg-amber-100 text-amber-800 border border-amber-300">⚠ เกิดวัตถุเสมือน (s₂ &lt; 0)</span>
+            </div>
+            <div id="s3_calcContainer" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 3B: Mission Mode (3 Randomized Dual-Optics Problems) -->
+      <div id="s3MissionView" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span id="s3mStepTag" class="px-3 py-1 rounded-full text-xs font-display font-bold bg-purple-100 text-purple-700">ภารกิจระบบคู่ ข้อที่ 1 / 3</span>
+            <h2 class="font-display font-bold text-base sm:text-lg text-slate-900 mt-1.5">คำนวณระบบทัศนอุปกรณ์คู่ทีละขั้นตอน</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="openCertBtn" type="button" class="hidden px-3 py-2 rounded-xl text-xs font-display font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm active:scale-95">
+              🏆 ดูใบรับรองส่งครู
+            </button>
+            <button id="s3mRerollBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-display font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95">
+              🎲 สุ่มโจทย์ใหม่
+            </button>
+          </div>
+        </div>
+
+        <div id="s3mProblemText" class="rounded-xl bg-purple-50/70 border border-purple-200 p-4 text-sm sm:text-base text-slate-800 leading-relaxed"></div>
+
+        <!-- ตัวอย่างวิธีคิดและคำใบ้ -->
+        <div>
+          <button id="s3mHintToggle" type="button" class="text-xs sm:text-sm font-display font-semibold text-amber-700 hover:text-amber-800 inline-flex items-center gap-1.5">
+            <span>📖 ดูตัวอย่างวิธีคิดทีละขั้น &amp; คำใบ้</span>
+          </button>
+          <div id="s3mHintBox" class="hidden mt-2 rounded-xl bg-amber-50/80 border border-amber-200 p-3.5 text-xs sm:text-sm text-amber-950 space-y-1.5 math-eq"></div>
+        </div>
+
+        <!-- ฟอร์มกรอก 4 ค่า -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label for="s3m_sp1" class="block text-xs font-display font-semibold text-slate-700 mb-1">1. ระยะภาพที่ 1: s'₁ (ซม.)</label>
+            <input id="s3m_sp1" type="number" step="any" placeholder="เช่น 30 หรือ -10" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            <p id="s3m_err_sp1" class="text-[11px] mt-1 font-medium"></p>
+          </div>
+          <div>
+            <label for="s3m_s2" class="block text-xs font-display font-semibold text-slate-700 mb-1">2. ระยะวัตถุที่ 2: s₂ = d − s'₁</label>
+            <input id="s3m_s2" type="number" step="any" placeholder="เช่น 20 หรือ -5" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            <p id="s3m_err_s2" class="text-[11px] mt-1 font-medium"></p>
+          </div>
+          <div>
+            <label for="s3m_sp2" class="block text-xs font-display font-semibold text-slate-700 mb-1">3. ระยะภาพสุดท้าย: s'₂ (ซม.)</label>
+            <input id="s3m_sp2" type="number" step="any" placeholder="เช่น 60 หรือ -12" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            <p id="s3m_err_sp2" class="text-[11px] mt-1 font-medium"></p>
+          </div>
+          <div>
+            <label for="s3m_mtot" class="block text-xs font-display font-semibold text-slate-700 mb-1">4. กำลังขยายรวม |m<sub>รวม</sub>| (เท่า)</label>
+            <input id="s3m_mtot" type="number" step="any" placeholder="เช่น 3 หรือ 1.5" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            <p id="s3m_err_mtot" class="text-[11px] mt-1 font-medium"></p>
+          </div>
+        </div>
+
+        <div id="s3mFeedback" class="hidden rounded-xl p-3.5 text-sm font-medium"></div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div class="flex items-center gap-1.5" id="s3mDots"></div>
+          <div class="flex items-center gap-2">
+            <button id="s3mCheckBtn" type="button" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-display font-semibold text-sm shadow-sm active:scale-95">
+              ตรวจคำตอบ ✓
+            </button>
+            <button id="s3mNextBtn" type="button" class="hidden px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-display font-semibold text-sm shadow-sm active:scale-95">
+              ข้อถัดไป →
+            </button>
+            <button id="s3mFinishBtn" type="button" class="hidden px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-display font-bold text-sm shadow-sm active:scale-95">
+              🎉 รับใบรับรองส่งครู!
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== CERTIFICATE / SCORE CARD MODAL ==================== -->
+  <div id="certModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
+      <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-5 text-white text-center relative">
+        <button id="certCloseBtn" type="button" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold">✕</button>
+        <div class="text-4xl mb-1">🏆</div>
+        <h2 class="font-display font-bold text-xl">ภารกิจเสร็จสิ้นสมบูรณ์!</h2>
+        <p class="text-xs text-blue-100 mt-0.5">OptiLab AR 2.0 • ใบรับรองผลการเรียนรู้ฟิสิกส์ (สสวท.)</p>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- กรอกข้อมูลนักเรียนสำหรับแคปหน้าจอส่งครู -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div class="sm:col-span-3">
+            <label class="block text-[11px] font-display font-semibold text-slate-500 mb-0.5">ชื่อ-นามสกุล นักเรียน</label>
+            <input id="certName" type="text" placeholder="พิมพ์ชื่อ-นามสกุล เพื่อแคปหน้าจอส่งครู..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-[11px] font-display font-semibold text-slate-500 mb-0.5">ชั้น / ห้อง</label>
+            <input id="certClass" type="text" placeholder="เช่น ม.5/1" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-display font-semibold text-slate-500 mb-0.5">เลขที่</label>
+            <input id="certNo" type="text" placeholder="เช่น 12" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <!-- สรุปผลแต่ละด่าน -->
+        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-3.5 space-y-2 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-slate-700">ด่านที่ 1: ฝึกวาดทางเดินแสง</span>
+            <span id="certS1Stat" class="font-display font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full text-xs">ผ่านแล้ว</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-slate-700">ด่านที่ 2: ภารกิจสมการกระจกและเลนส์</span>
+            <span id="certS2Stat" class="font-display font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full text-xs">3/3 ข้อ ✓</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-slate-700">ด่านที่ 3: ภารกิจระบบทัศนอุปกรณ์คู่</span>
+            <span id="certS3Stat" class="font-display font-bold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full text-xs">3/3 ข้อ ✓</span>
+          </div>
+          <hr class="border-slate-200 my-1" />
+          <div class="flex items-center justify-between text-xs text-slate-500">
+            <span>เวลาที่สำเร็จ: <b id="certTime" class="text-slate-700"></b></span>
+            <span>รหัสยืนยัน: <b id="certCode" class="font-mono text-indigo-700"></b></span>
+          </div>
+        </div>
+
+        <p class="text-center text-xs text-slate-500">📸 นักเรียนสามารถแคปหน้าจอใบรับรองนี้ส่งให้คุณครูเพื่อรับคะแนนได้ทันที</p>
+
+        <div class="flex flex-wrap gap-2 justify-center">
+          <button id="certNewRoundBtn" type="button" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-display font-semibold text-xs sm:text-sm shadow-sm active:scale-95">
+            🎲 สุ่มภารกิจรอบใหม่ทั้งหมด
+          </button>
+          <button id="certDoneBtn" type="button" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-display font-semibold text-xs sm:text-sm active:scale-95">
+            ปิดหน้าต่าง
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="max-w-7xl w-full mx-auto px-4 py-4 text-center text-xs text-slate-400">
+    OptiLab AR 2.0 • สื่อการสอนฟิสิกส์ ม.ปลาย เรื่องกระจกโค้งและเลนส์บาง (สสวท.)
+  </footer>
+
+  <!-- ==================== APPLICATION JAVASCRIPT ==================== -->
+  <script>
+    /**
+     * OptiLab AR 2.0 — Comprehensive Interactive Thai High School Physics (สสวท.) Engine
+     */
+    const DEVICES = {
+      plane_mirror:   { id: 'plane_mirror',   name: 'กระจกเงาราบ',  short: 'กระจกราบ',  kind: 'mirror', sign: 0 },
+      concave_mirror: { id: 'concave_mirror', name: 'กระจกโค้งเว้า', short: 'กระจกเว้า', kind: 'mirror', sign: 1 },
+      convex_mirror:  { id: 'convex_mirror',  name: 'กระจกโค้งนูน', short: 'กระจกนูน',  kind: 'mirror', sign: -1 },
+      convex_lens:    { id: 'convex_lens',    name: 'เลนส์นูน',     short: 'เลนส์นูน',  kind: 'lens',   sign: 1 },
+      concave_lens:   { id: 'concave_lens',   name: 'เลนส์เว้า',    short: 'เลนส์เว้า', kind: 'lens',   sign: -1 },
+    };
+
+    const state = {
+      stage: 1,
+      teacherMode: false,
+      arActive: false,
+      arStream: null,
+      arOpacity: 38,
+      zoom: 1.0,
+
+      // Single element shared params (Stage 1 & Stage 2 Explore)
+      device: 'concave_mirror',
+      s: 30,
+      fMag: 15,
+      y: 8,
+
+      // Stage 1 Hand-Drawing State
+      s1Mode: 'draw', // 'draw' | 'auto'
+      drawStep: 0,    // 0..4 (4 = completed)
+      guidedCount: 0, // auto-guide ON for first 3 completions
+      guideEnabled: true,
+      completedDevices: new Set(),
+      activeDragRay: null, // { sx, sy, cx, cy } in px while dragging
+      pulsePhase: 0,
+
+      // Stage 2 State
+      s2Sub: 'explore', // 'explore' | 'mission'
+      s2Missions: [],
+      s2Idx: 0,
+      s2Solved: [false, false, false],
+      s2SelectedType: null,
+
+      // Stage 3 State
+      s3Sub: 'explore', // 'explore' | 'mission'
+      s3Step: 3,        // 1, 2, 3 stepper
+      s3ActiveSlot: 1,  // 1 or 2 for tap-to-place from palette
+      dual: {
+        el1: 'convex_lens',
+        el2: 'convex_lens',
+        s1: 25,
+        d: 50,
+        f1Mag: 15,
+        f2Mag: 15,
+        y: 7,
+      },
+      s3Missions: [],
+      s3Idx: 0,
+      s3Solved: [false, false, false],
+      certCode: '',
+      certTime: '',
+
+      // Canvas interaction
+      dragging: null, // 'draw_ray' | 'obj' | 'focal' | 'dual_obj' | 'dual_el2'
+      paletteDrag: null, // { devId, ghostEl }
+    };
+
+    const canvas = document.getElementById('opticsCanvas');
+    const ctx = canvas.getContext('2d');
+    const canvasContainer = document.getElementById('canvasContainer');
+    const arVideo = document.getElementById('arVideo');
+    const arBackdropTint = document.getElementById('arBackdropTint');
+
+    const viewport = { w: 800, h: 400, originX: 400, originY: 200, pxPerCm: 7 };
+
+    // ==================== 1. UTILITIES ====================
+    function showToast(msg, type = 'warning', shake = false) {
+      const box = document.getElementById('toastBox');
+      const inner = document.getElementById('toastInner');
+      const icon = document.getElementById('toastIcon');
+      document.getElementById('toastMessage').textContent = msg;
+      const styles = {
+        error:   'bg-rose-50 border-rose-200 text-rose-900',
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+        warning: 'bg-amber-50 border-amber-200 text-amber-900',
+        info:    'bg-blue-50 border-blue-200 text-blue-900',
+      };
+      const icons = { error: '❌', success: '✅', warning: '⚠️', info: '💡' };
+      icon.textContent = icons[type] || '⚠️';
+      inner.className = `rounded-xl border px-4 py-2.5 text-sm flex items-start justify-between gap-3 shadow-sm ${styles[type] || styles.warning}`;
+      box.classList.remove('hidden');
+      if (shake) {
+        inner.classList.remove('animate-shake');
+        void inner.offsetWidth;
+        inner.classList.add('animate-shake');
+      }
+    }
+    function hideToast() { document.getElementById('toastBox').classList.add('hidden'); }
+
+    function fmtNum(n, dec = 2) {
+      if (!Number.isFinite(n)) return '∞';
+      const r = Math.round(n * Math.pow(10, dec)) / Math.pow(10, dec);
+      return Number.isInteger(r) ? String(r) : r.toFixed(dec).replace(/\.?0+$/, '');
+    }
+    function fmtSigned(n, dec = 2) {
+      if (!Number.isFinite(n)) return '∞';
+      if (Math.abs(n) < 1e-9) return '0';
+      return (n > 0 ? '+' : '−') + fmtNum(Math.abs(n), dec);
+    }
+    function fracHTML(num, den) {
+      return `<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`;
+    }
+    function toPxX(cmX) { return viewport.originX + cmX * viewport.pxPerCm; }
+    function toPxY(cmY) { return viewport.originY - cmY * viewport.pxPerCm; }
+    function toCmX(pxX) { return (pxX - viewport.originX) / viewport.pxPerCm; }
+    function toCmY(pxY) { return (viewport.originY - pxY) / viewport.pxPerCm; }
+
+    function isStage3Unlocked() {
+      return state.teacherMode || state.s2Solved.every(Boolean);
+    }
+
+    // ==================== 2. PHYSICS ENGINE (สสวท.) ====================
+    function solveSingleOptic(deviceId, s, fMag, yObj) {
+      const dev = DEVICES[deviceId];
+      if (deviceId === 'plane_mirror') {
+        return {
+          dev, f: Infinity, R: Infinity, s, sp: -s, m: -1, yImg: yObj,
+          isInfinity: false, isReal: false, isUpright: true
+        };
+      }
+      const f = dev.sign * fMag;
+      const R = 2 * f;
+      if (Math.abs(s - f) < 0.08) {
+        return {
+          dev, f, R, s, sp: Infinity, m: Infinity, yImg: Infinity,
+          isInfinity: true, isReal: false, isUpright: false
+        };
+      }
+      const sp = (s * f) / (s - f);
+      const m = sp / s;
+      const yImg = yObj * (-sp / s);
+      return {
+        dev, f, R, s, sp, m, yImg,
+        isInfinity: false, isReal: sp > 0, isUpright: (yImg * yObj) > 0
+      };
+    }
+
+    function describeSingleImage(res) {
+      const { dev, f, s, sp, m, isInfinity, isReal, isUpright } = res;
+      const absM = Math.abs(m);
+      if (dev.id === 'plane_mirror') {
+        return {
+          zoneTag: 'กฎการสะท้อน θᵢ = θᵣ',
+          type: 'ภาพเสมือน', orient: 'หัวตั้ง (กลับซ้าย-ขวา)', size: 'เท่ากับวัตถุ (1x)',
+          pos: `หลังกระจก ${fmtNum(s, 1)} cm`,
+          text: `เมื่อวางวัตถุหน้า<b>กระจกเงาราบ</b>ที่ระยะ ${fmtNum(s, 1)} cm แนวเส้นประหลังกระจกจะตัดกันเกิดเป็น <b>ภาพเสมือน หัวตั้ง ขนาดเท่าวัตถุ</b> ที่ระยะภาพ s' = −${fmtNum(s, 1)} cm`
+        };
+      }
+      if (isInfinity) {
+        return {
+          zoneTag: 's = f (วางที่จุดโฟกัส)',
+          type: 'เกิดภาพที่อนันต์ (∞)', orient: '—', size: 'ใหญ่มาก (∞)', pos: 'ไม่เกิดจุดตัด',
+          text: `เมื่อวางวัตถุที่<b>จุดโฟกัส F</b> (s = f = ${fmtNum(f, 1)} cm) รังสีหลัง${dev.kind === 'mirror' ? 'สะท้อน' : 'หักเห'}จะเดินทาง<b>ขนานกันตลอด</b> จึงไม่เกิดจุดตัด (ภาพอยู่ที่ระยะอนันต์)`
+        };
+      }
+      const typeStr = isReal ? 'ภาพจริง' : 'ภาพเสมือน';
+      const orientStr = isUpright ? 'หัวตั้ง' : 'หัวกลับ';
+      const sizeStr = Math.abs(absM - 1) <= 0.04 ? 'เท่ากับวัตถุ (1x)' : (absM > 1 ? `ขยาย (${fmtNum(absM, 2)}x)` : `ย่อ (${fmtNum(absM, 2)}x)`);
+      const posStr = dev.kind === 'mirror'
+        ? (isReal ? `หน้ากระจก ${fmtNum(sp, 1)} cm` : `หลังกระจก ${fmtNum(Math.abs(sp), 1)} cm`)
+        : (isReal ? `หลังเลนส์ ${fmtNum(sp, 1)} cm` : `หน้าเลนส์ ${fmtNum(Math.abs(sp), 1)} cm`);
+
+      const fAbs = Math.abs(f);
+      let zoneTag = '', text = '';
+      if (dev.sign < 0) {
+        zoneTag = dev.kind === 'mirror' ? 'กระจกนูน (กระจายแสง)' : 'เลนส์เว้า (กระจายแสง)';
+        text = `<b>${dev.name}</b> มีสมบัติกระจายแสง (f = ${fmtSigned(f, 1)} cm) เส้นประที่ต่อย้อนกลับจะตัดกันเกิดเป็น <b>ภาพเสมือน หัวตั้ง ขนาดเล็กกว่าวัตถุ</b> เสมอที่ระยะ ${posStr}`;
+      } else if (s > 2 * fAbs + 0.3) {
+        zoneTag = 's > 2f';
+        text = `วางวัตถุไกลกว่า 2f รังสีตัดกันจริงเกิดเป็น <b>ภาพจริง หัวกลับ ขนาดเล็กกว่าวัตถุ</b> ที่ระยะ ${posStr} (ระหว่าง F กับ 2F)`;
+      } else if (Math.abs(s - 2 * fAbs) <= 0.3) {
+        zoneTag = 's = 2f (ที่ C / 2F)';
+        text = `วางวัตถุที่ระยะ 2f พอดี รังสีตัดกันจริงที่ระยะ 2f เช่นกัน เกิดเป็น <b>ภาพจริง หัวกลับ ขนาดเท่ากับวัตถุ</b> (m = +1)`;
+      } else if (s > fAbs) {
+        zoneTag = 'f < s < 2f';
+        text = `วางวัตถุระหว่าง F กับ 2F รังสีตัดกันจริงเลยระยะ 2f เกิดเป็น <b>ภาพจริง หัวกลับ ขนาดใหญ่กว่าวัตถุ</b> (${fmtNum(absM, 2)} เท่า)`;
+      } else {
+        zoneTag = 's < f (ใกล้กว่าจุด F)';
+        text = `วางวัตถุใกล้กว่าจุดโฟกัส F รังสีบานออกต้องต่อเส้นประย้อนกลับจึงตัดกัน เกิดเป็น <b>ภาพเสมือน หัวตั้ง ขนาดใหญ่กว่าวัตถุ</b> (${fmtNum(absM, 2)} เท่า)`;
+      }
+      return { zoneTag, type: typeStr, orient: orientStr, size: sizeStr, pos: posStr, text };
+    }
+
+    function solveDualOptics(cfg = state.dual) {
+      const { el1, el2, s1, d, f1Mag, f2Mag, y } = cfg;
+      const dev1 = DEVICES[el1];
+      const dev2 = DEVICES[el2];
+      const x1 = -d / 2;
+      const x2 = d / 2;
+      const xO = dev1.kind === 'lens' ? (x1 - s1) : (x1 + s1);
+      const res1 = solveSingleOptic(el1, s1, f1Mag, y);
+      const xI1 = res1.isInfinity ? Infinity : (x1 + res1.sp);
+      const yI1 = res1.isInfinity ? Infinity : res1.yImg;
+
+      let s2, res2, xI2, yI2, isVirtualObject = false, mTotal = NaN;
+      if (res1.isInfinity) {
+        s2 = Infinity;
+        const f2 = dev2.id === 'plane_mirror' ? Infinity : dev2.sign * f2Mag;
+        res2 = { dev: dev2, f: f2, s: Infinity, sp: f2, m: 0, yImg: 0, isInfinity: !Number.isFinite(f2), isReal: f2 > 0, isUpright: true };
+        xI2 = Number.isFinite(f2) ? (dev2.kind === 'lens' ? x2 + f2 : x2 - f2) : Infinity;
+        yI2 = Number.isFinite(f2) ? ((dev1.id === 'plane_mirror' ? 0 : (-y / res1.f)) * f2) : Infinity;
+      } else {
+        s2 = d - res1.sp;
+        isVirtualObject = s2 < 0;
+        res2 = solveSingleOptic(el2, s2, f2Mag, yI1);
+        if (!res2.isInfinity) {
+          xI2 = dev2.kind === 'lens' ? (x2 + res2.sp) : (x2 - res2.sp);
+          yI2 = res2.yImg;
+          mTotal = res1.m * res2.m;
+        } else {
+          xI2 = Infinity; yI2 = Infinity; mTotal = Infinity;
+        }
+      }
+      return { dev1, dev2, x1, x2, xO, res1, xI1, yI1, s2, isVirtualObject, res2, xI2, yI2, mTotal, yO: y, d };
+    }
+
+    // ==================== 3. STAGE 1 HAND-DRAWING WAYPOINTS ====================
+    /** บังคับจุดเป้าหมายปลายรังสีให้อยู่ในกรอบจอที่นิ้วแตะถึงได้ง่าย */
+    function clampRayTarget(sx, sy, dx, dy) {
+      const marginX = 42, marginY = 44;
+      const minX = toCmX(marginX), maxX = toCmX(viewport.w - marginX);
+      const maxY = toCmY(marginY), minY = toCmY(viewport.h - marginY);
+      let t = 1.0;
+      if (dx > 1e-5) t = Math.min(t, (maxX - sx) / dx);
+      if (dx < -1e-5) t = Math.min(t, (minX - sx) / dx);
+      if (dy > 1e-5) t = Math.min(t, (maxY - sy) / dy);
+      if (dy < -1e-5) t = Math.min(t, (minY - sy) / dy);
+      t = Math.max(0.25, Math.min(1.0, t));
+      return { x: sx + dx * t, y: sy + dy * t };
+    }
+
+    /** สร้าง 4 ขั้นตอน (2 รังสีหลัก) สำหรับให้นักเรียนใช้นิ้วลากเองครบทั้ง 5 อุปกรณ์ */
+    function getStage1DrawSteps() {
+      const dev = DEVICES[state.device];
+      const s = state.s, y = state.y, fMag = state.fMag;
+      const xO = -s;
+
+      if (dev.id === 'plane_mirror') {
+        const t2 = clampRayTarget(0, 0, -s, -y);
+        return [
+          { ray: 1, color: '#EF4444', start: { x: xO, y }, end: { x: 0, y }, label: 'ขั้นที่ 1/4: ลากจากปลายวัตถุตั้งฉากไปแตะกระจกเงาราบ' },
+          { ray: 1, color: '#EF4444', start: { x: 0, y }, end: { x: xO * 0.75, y }, label: 'ขั้นที่ 2/4: ลากเส้นสะท้อนย้อนกลับทางเดิม (มุมตกกระทบ 0°)' },
+          { ray: 2, color: '#2563EB', start: { x: xO, y }, end: { x: 0, y: 0 }, label: 'ขั้นที่ 3/4: ลากรังสีที่ 2 จากปลายวัตถุไปยังจุดกึ่งกลางกระจก (V)' },
+          { ray: 2, color: '#2563EB', start: { x: 0, y: 0 }, end: t2, label: 'ขั้นที่ 4/4: ลากเส้นสะท้อนลงด้านล่างด้วยมุมเท่ากัน (θᵢ = θᵣ)' },
+        ];
+      }
+      if (dev.id === 'concave_mirror') {
+        const t2 = clampRayTarget(0, 0, -s, -y);
+        return [
+          { ray: 1, color: '#EF4444', start: { x: xO, y }, end: { x: 0, y }, label: 'ขั้นที่ 1/4: ลากจากปลายวัตถุ ขนานแกนมุขสำคัญ ไปแตะกระจกเว้า' },
+          { ray: 1, color: '#EF4444', start: { x: 0, y }, end: { x: -fMag, y: 0 }, label: 'ขั้นที่ 2/4: ลากเส้นสะท้อนจากจุดตกกระทบ ผ่านจุดโฟกัส (F)' },
+          { ray: 2, color: '#2563EB', start: { x: xO, y }, end: { x: 0, y: 0 }, label: 'ขั้นที่ 3/4: ลากรังสีที่ 2 จากปลายวัตถุ ไปยังจุดยอดกระจก (V)' },
+          { ray: 2, color: '#2563EB', start: { x: 0, y: 0 }, end: t2, label: 'ขั้นที่ 4/4: ลากเส้นสะท้อนสมมาตรด้วยมุม θᵢ = θᵣ เพื่อหาจุดตัด!' },
+        ];
+      }
+      if (dev.id === 'convex_mirror') {
+        const dx1 = -22, dy1 = (y / fMag) * 22;
+        const t1 = clampRayTarget(0, y, dx1, dy1);
+        const t2 = clampRayTarget(0, 0, -s, -y);
+        return [
+          { ray: 1, color: '#EF4444', start: { x: xO, y }, end: { x: 0, y }, label: 'ขั้นที่ 1/4: ลากจากปลายวัตถุ ขนานแกนมุขสำคัญ ไปแตะกระจกนูน' },
+          { ray: 1, color: '#EF4444', start: { x: 0, y }, end: t1, label: 'ขั้นที่ 2/4: ลากเส้นสะท้อนกระจายออก ให้แนวตรงกับจุดโฟกัส F หลังกระจก' },
+          { ray: 2, color: '#2563EB', start: { x: xO, y }, end: { x: 0, y: 0 }, label: 'ขั้นที่ 3/4: ลากรังสีที่ 2 จากปลายวัตถุ ไปยังจุดยอดกระจก (V)' },
+          { ray: 2, color: '#2563EB', start: { x: 0, y: 0 }, end: t2, label: 'ขั้นที่ 4/4: ลากเส้นสะท้อนลงด้านล่าง (θᵢ = θᵣ) เพื่อดูจุดตัดเส้นประหลังกระจก!' },
+        ];
+      }
+      if (dev.id === 'convex_lens') {
+        const t2 = clampRayTarget(0, 0, s, -y);
+        return [
+          { ray: 1, color: '#EF4444', start: { x: xO, y }, end: { x: 0, y }, label: 'ขั้นที่ 1/4: ลากจากปลายวัตถุ ขนานแกนมุขสำคัญ ไปแตะกึ่งกลางเลนส์นูน' },
+          { ray: 1, color: '#EF4444', start: { x: 0, y }, end: { x: fMag, y: 0 }, label: 'ขั้นที่ 2/4: ลากเส้นหักเหจากเลนส์นูน ผ่านจุดโฟกัส F\' ด้านขวา' },
+          { ray: 2, color: '#2563EB', start: { x: xO, y }, end: { x: 0, y: 0 }, label: 'ขั้นที่ 3/4: ลากรังสีที่ 2 จากปลายวัตถุ ตรงเข้าจุดกึ่งกลางเลนส์ (O)' },
+          { ray: 2, color: '#2563EB', start: { x: 0, y: 0 }, end: t2, label: 'ขั้นที่ 4/4: ลากทะลุเป็นเส้นตรงไม่เบี่ยงเบน เพื่อหาจุดตัดของภาพ!' },
+        ];
+      }
+      // concave_lens
+      const dx1 = 22, dy1 = (y / fMag) * 22;
+      const t1 = clampRayTarget(0, y, dx1, dy1);
+      const t2 = clampRayTarget(0, 0, s, -y);
+      return [
+        { ray: 1, color: '#EF4444', start: { x: xO, y }, end: { x: 0, y }, label: 'ขั้นที่ 1/4: ลากจากปลายวัตถุ ขนานแกนมุขสำคัญ ไปแตะกึ่งกลางเลนส์เว้า' },
+        { ray: 1, color: '#EF4444', start: { x: 0, y }, end: t1, label: 'ขั้นที่ 2/4: ลากเส้นหักเหกระจายออก ให้แนวเสมือนพุ่งมาจากจุด F ด้านซ้าย' },
+        { ray: 2, color: '#2563EB', start: { x: xO, y }, end: { x: 0, y: 0 }, label: 'ขั้นที่ 3/4: ลากรังสีที่ 2 จากปลายวัตถุ ตรงเข้าจุดกึ่งกลางเลนส์ (O)' },
+        { ray: 2, color: '#2563EB', start: { x: 0, y: 0 }, end: t2, label: 'ขั้นที่ 4/4: ลากทะลุเป็นเส้นตรงไม่เบี่ยงเบน เพื่อหาจุดตัดของภาพเสมือน!' },
+      ];
+    }
+
+    function resetDrawing() {
+      state.drawStep = 0;
+      state.activeDragRay = null;
+      hideToast();
+      updateAll();
+    }
+
+    // ==================== 4. RANDOMIZED MISSION GENERATORS ====================
+    function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function generateStage2Missions() {
+      const convPools = [
+        { f: 10, sList: [15, 20, 30, 5, 6] },
+        { f: 12, sList: [18, 20, 24, 36, 6, 8] },
+        { f: 15, sList: [20, 30, 45, 10, 12] },
+        { f: 20, sList: [30, 40, 60, 10, 15] },
+      ];
+      const divPools = [
+        { f: 10, sList: [10, 15, 30, 40] },
+        { f: 12, sList: [12, 24, 36] },
+        { f: 15, sList: [15, 30, 60] },
+        { f: 20, sList: [20, 30, 60] },
+      ];
+
+      const makeQ = (deviceId, isDiv) => {
+        const pool = pickRandom(isDiv ? divPools : convPools);
+        const s = pickRandom(pool.sList);
+        const y = pickRandom([4, 6, 8, 10]);
+        const res = solveSingleOptic(deviceId, s, pool.f, y);
+        return { deviceId, fMag: pool.f, s, y, res };
+      };
+
+      // สร้าง 3 ข้อไม่ซ้ำชนิดกัน (กระจกเว้า, เลนส์นูน, กระจกนูน/เลนส์เว้า)
+      const q1 = makeQ('concave_mirror', false);
+      const q2 = makeQ('convex_lens', false);
+      const q3 = makeQ(pickRandom(['convex_mirror', 'concave_lens']), true);
+      state.s2Missions = [q1, q2, q3];
+      state.s2Idx = 0;
+      state.s2Solved = [false, false, false];
+      state.s2SelectedType = null;
+    }
+
+    function generateStage3Missions() {
+      // สร้างชุดตัวเลขลงตัวสะอาดๆ สำหรับระบบคู่ 3 ข้อ
+      const q1Pool = [ // เลนส์นูน + เลนส์นูน/เลนส์เว้า
+        { el1: 'convex_lens', el2: 'convex_lens', f1Mag: 10, f2Mag: 12, s1: 15, d: 48 }, // sp1=30, s2=18, sp2=36
+        { el1: 'convex_lens', el2: 'convex_lens', f1Mag: 12, f2Mag: 10, s1: 18, d: 51 }, // sp1=36, s2=15, sp2=30
+        { el1: 'convex_lens', el2: 'concave_lens', f1Mag: 15, f2Mag: 10, s1: 30, d: 45 }, // sp1=30, s2=15, sp2=-6
+        { el1: 'convex_lens', el2: 'convex_lens', f1Mag: 15, f2Mag: 10, s1: 30, d: 45 }, // sp1=30, s2=15, sp2=30
+      ];
+      const q2Pool = [ // เลนส์ + กระจกโค้ง
+        { el1: 'convex_lens', el2: 'concave_mirror', f1Mag: 10, f2Mag: 12, s1: 15, d: 54 }, // sp1=30, s2=24, sp2=24
+        { el1: 'convex_lens', el2: 'concave_mirror', f1Mag: 12, f2Mag: 10, s1: 24, d: 39 }, // sp1=24, s2=15, sp2=30
+        { el1: 'convex_lens', el2: 'convex_mirror',  f1Mag: 10, f2Mag: 15, s1: 20, d: 50 }, // sp1=20, s2=30, sp2=-10
+        { el1: 'convex_lens', el2: 'plane_mirror',   f1Mag: 12, f2Mag: 15, s1: 20, d: 45 }, // sp1=30, s2=15, sp2=-15
+      ];
+      const q3Pool = [ // กระจกโค้ง + เลนส์/กระจกโค้ง
+        { el1: 'concave_mirror', el2: 'concave_mirror', f1Mag: 10, f2Mag: 12, s1: 15, d: 48 }, // sp1=30, s2=18, sp2=36
+        { el1: 'concave_mirror', el2: 'convex_mirror',  f1Mag: 12, f2Mag: 10, s1: 24, d: 34 }, // sp1=24, s2=10, sp2=-5
+        { el1: 'concave_mirror', el2: 'convex_lens',    f1Mag: 15, f2Mag: 10, s1: 30, d: 50 }, // sp1=30, s2=20, sp2=20
+        { el1: 'convex_lens',    el2: 'concave_lens',   f1Mag: 10, f2Mag: 15, s1: 15, d: 20 }, // sp1=30, s2=-10 (วัตถุเสมือน!), sp2=30
+      ];
+      state.s3Missions = [
+        { ...pickRandom(q1Pool), y: 6 },
+        { ...pickRandom(q2Pool), y: 6 },
+        { ...pickRandom(q3Pool), y: 6 },
+      ];
+      state.s3Idx = 0;
+      state.s3Solved = [false, false, false];
+    }
+
+    // ==================== 5. CANVAS RENDERING ENGINE ====================
+    function resizeCanvas() {
+      const rect = canvasContainer.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      viewport.w = rect.width;
+      viewport.h = rect.height;
+      render();
+    }
+
+    function drawGridAndRuler() {
+      const { w, h, originY } = viewport;
+      ctx.clearRect(0, 0, w, h);
+      if (!state.arActive) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      const stepMinor = 5, stepMajor = 10;
+      const minX = Math.floor(toCmX(0) / stepMinor) * stepMinor;
+      const maxX = Math.ceil(toCmX(w) / stepMinor) * stepMinor;
+      const minY = Math.floor(toCmY(h) / stepMinor) * stepMinor;
+      const maxY = Math.ceil(toCmY(0) / stepMinor) * stepMinor;
+
+      for (let x = minX; x <= maxX; x += stepMinor) {
+        const px = toPxX(x), maj = x % stepMajor === 0;
+        ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h);
+        ctx.strokeStyle = state.arActive ? (maj ? 'rgba(15,23,42,0.14)' : 'rgba(15,23,42,0.06)') : (maj ? '#E2E8F0' : '#F1F5F9');
+        ctx.lineWidth = maj ? 1 : 0.7; ctx.stroke();
+      }
+      for (let y = minY; y <= maxY; y += stepMinor) {
+        const py = toPxY(y), maj = y % stepMajor === 0;
+        ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(w, py);
+        ctx.strokeStyle = state.arActive ? (maj ? 'rgba(15,23,42,0.14)' : 'rgba(15,23,42,0.06)') : (maj ? '#E2E8F0' : '#F1F5F9');
+        ctx.lineWidth = maj ? 1 : 0.7; ctx.stroke();
+      }
+
+      // Principal axis
+      ctx.beginPath(); ctx.moveTo(0, originY); ctx.lineTo(w, originY);
+      ctx.strokeStyle = '#475569'; ctx.lineWidth = 1.6;
+      ctx.setLineDash([8, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+      // Bottom cm ruler
+      const rulerH = 22;
+      ctx.fillStyle = state.arActive ? 'rgba(255,255,255,0.78)' : 'rgba(248,250,252,0.94)';
+      ctx.fillRect(0, h - rulerH, w, rulerH);
+      ctx.beginPath(); ctx.moveTo(0, h - rulerH); ctx.lineTo(w, h - rulerH);
+      ctx.strokeStyle = '#CBD5E1'; ctx.lineWidth = 1; ctx.stroke();
+
+      ctx.fillStyle = '#475569'; ctx.font = '600 10px Prompt, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (let x = minX; x <= maxX; x += stepMajor) {
+        const px = toPxX(x);
+        if (px < 18 || px > w - 42) continue;
+        ctx.beginPath(); ctx.moveTo(px, h - rulerH); ctx.lineTo(px, h - rulerH + 5);
+        ctx.strokeStyle = '#64748B'; ctx.stroke();
+        ctx.fillText(`${Math.abs(x)}`, px, h - 9);
+      }
+      ctx.textAlign = 'right'; ctx.fillStyle = '#64748B';
+      ctx.fillText('ซม.', w - 8, h - 9);
+    }
+
+    function drawOpticalElement(deviceId, cmX, facing = -1, label = '') {
+      const px = toPxX(cmX), cy = viewport.originY;
+      const halfH = Math.min(viewport.h * 0.37, 142);
+      ctx.save();
+      if (deviceId === 'plane_mirror') {
+        ctx.beginPath(); ctx.moveTo(px, cy - halfH); ctx.lineTo(px, cy + halfH);
+        ctx.strokeStyle = '#0284C7'; ctx.lineWidth = 4; ctx.stroke();
+        const backDir = -facing;
+        ctx.strokeStyle = '#94A3B8'; ctx.lineWidth = 1.4;
+        for (let y = cy - halfH + 6; y <= cy + halfH - 4; y += 10) {
+          ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px + backDir * 9, y + 7); ctx.stroke();
+        }
+      } else if (deviceId === 'concave_mirror' || deviceId === 'convex_mirror') {
+        const bulge = 17 * (deviceId === 'concave_mirror' ? 1 : -1) * facing;
+        const backDir = -facing;
+        ctx.strokeStyle = '#94A3B8'; ctx.lineWidth = 1.3;
+        for (let t = 0.06; t <= 0.94; t += 0.065) {
+          const y = (cy - halfH) + t * (2 * halfH);
+          const norm = (t - 0.5) * 2;
+          const xc = px + bulge * norm * norm;
+          ctx.beginPath(); ctx.moveTo(xc, y); ctx.lineTo(xc + backDir * 9, y + 6); ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.moveTo(px + bulge, cy - halfH);
+        ctx.quadraticCurveTo(px - bulge, cy, px + bulge, cy + halfH);
+        ctx.strokeStyle = '#0284C7'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px, cy - halfH); ctx.lineTo(px, cy + halfH);
+        ctx.strokeStyle = 'rgba(2,132,199,0.22)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+      } else if (deviceId === 'convex_lens') {
+        const wLens = 14;
+        ctx.beginPath();
+        ctx.moveTo(px, cy - halfH);
+        ctx.quadraticCurveTo(px + wLens, cy, px, cy + halfH);
+        ctx.quadraticCurveTo(px - wLens, cy, px, cy - halfH);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(56,189,248,0.22)'; ctx.fill();
+        ctx.strokeStyle = '#0284C7'; ctx.lineWidth = 2.2; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px, cy - halfH); ctx.lineTo(px, cy + halfH);
+        ctx.strokeStyle = 'rgba(2,132,199,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+      } else {
+        const eW = 13, wW = 3;
+        ctx.beginPath();
+        ctx.moveTo(px - eW, cy - halfH); ctx.lineTo(px + eW, cy - halfH);
+        ctx.quadraticCurveTo(px + wW, cy, px + eW, cy + halfH);
+        ctx.lineTo(px - eW, cy + halfH);
+        ctx.quadraticCurveTo(px - wW, cy, px - eW, cy - halfH);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(56,189,248,0.22)'; ctx.fill();
+        ctx.strokeStyle = '#0284C7'; ctx.lineWidth = 2.2; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px, cy - halfH); ctx.lineTo(px, cy + halfH);
+        ctx.strokeStyle = 'rgba(2,132,199,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+      }
+      if (label) {
+        ctx.font = '600 11px Prompt, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#0369A1';
+        ctx.fillText(label, px, cy - halfH - 9);
+      }
+      ctx.restore();
+    }
+
+    function drawKeyPoint(cmX, label, color = '#0F172A', highlight = false) {
+      const px = toPxX(cmX), py = viewport.originY;
+      if (px < -15 || px > viewport.w + 15) return;
+      ctx.save();
+      if (highlight) {
+        ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(16,185,129,0.16)'; ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(px, py, 4.2, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.font = '700 11px Prompt, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = color;
+      ctx.fillText(label, px, py + 17);
+      ctx.restore();
+    }
+
+    function drawArrowObject(cmX, cmY, color, label, dashed = false, showHandle = false) {
+      const px = toPxX(cmX), py0 = viewport.originY, py1 = toPxY(cmY);
+      if (px < -180 || px > viewport.w + 180) return;
+      ctx.save();
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2;
+      if (dashed) ctx.setLineDash([6, 4]);
+      ctx.beginPath(); ctx.moveTo(px, py0); ctx.lineTo(px, py1); ctx.stroke();
+      ctx.setLineDash([]);
+      const dir = py1 < py0 ? -1 : 1;
+      const headLen = Math.min(11, Math.abs(py1 - py0) * 0.45);
+      ctx.beginPath(); ctx.moveTo(px, py1);
+      ctx.lineTo(px - 6, py1 - dir * headLen);
+      ctx.lineTo(px + 6, py1 - dir * headLen);
+      ctx.closePath(); ctx.fill();
+      if (showHandle) {
+        ctx.beginPath(); ctx.arc(px, py1, 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(30,58,138,0.15)'; ctx.fill();
+      }
+      ctx.font = '700 12px Prompt, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = color;
+      ctx.fillText(label, px, dir < 0 ? py1 - 12 : py1 + 17);
+      ctx.restore();
+    }
+
+    function drawRaySegment(x1, y1, x2, y2, color, dashed = false, showArrow = true) {
+      const p1x = toPxX(x1), p1y = toPxY(y1), p2x = toPxX(x2), p2y = toPxY(y2);
+      ctx.save();
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = dashed ? 1.7 : 2.4;
+      if (dashed) ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.moveTo(p1x, p1y); ctx.lineTo(p2x, p2y); ctx.stroke();
+      ctx.setLineDash([]);
+      if (showArrow && !dashed) {
+        const dx = p2x - p1x, dy = p2y - p1y, len = Math.hypot(dx, dy);
+        if (len > 26) {
+          const mx = p1x + dx * 0.52, my = p1y + dy * 0.52;
+          ctx.translate(mx, my); ctx.rotate(Math.atan2(dy, dx));
+          ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-4, -3.8); ctx.lineTo(-4, 3.8); ctx.closePath(); ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawDimension(cmX1, cmX2, offsetPxY, text, color = '#475569') {
+      const p1 = toPxX(cmX1), p2 = toPxX(cmX2), y = viewport.originY + offsetPxY;
+      if (Math.abs(p2 - p1) < 16) return;
+      ctx.save();
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(p1, y - 4); ctx.lineTo(p1, y + 4);
+      ctx.moveTo(p2, y - 4); ctx.lineTo(p2, y + 4);
+      ctx.moveTo(p1, y); ctx.lineTo(p2, y);
+      ctx.stroke();
+      const mid = (p1 + p2) / 2;
+      ctx.font = '600 11px Prompt, sans-serif';
+      const tw = ctx.measureText(text).width + 8;
+      ctx.fillStyle = state.arActive ? 'rgba(255,255,255,0.88)' : '#FFFFFF';
+      ctx.fillRect(mid - tw / 2, y - 8, tw, 16);
+      ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, mid, y);
+      ctx.restore();
+    }
+
+    function drawIntersectionGlow(cmX, cmY, isReal) {
+      const px = toPxX(cmX), py = toPxY(cmY);
+      if (px < -40 || px > viewport.w + 40) return;
+      const pulse = 10 + Math.sin(state.pulsePhase) * 4;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(px, py, pulse + 5, 0, Math.PI * 2);
+      ctx.fillStyle = isReal ? 'rgba(16,185,129,0.22)' : 'rgba(147,51,234,0.22)';
+      ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = isReal ? '#059669' : '#9333EA';
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.restore();
+    }
+
+    /** วาดด่านที่ 1 และด่านที่ 2 (อุปกรณ์เดี่ยว) */
+    function renderSingleStage() {
+      const isS2Mission = state.stage === 2 && state.s2Sub === 'mission';
+      const curM = isS2Mission ? state.s2Missions[state.s2Idx] : null;
+      const devId = isS2Mission ? curM.deviceId : state.device;
+      const sVal = isS2Mission ? curM.s : state.s;
+      const fMagVal = isS2Mission ? curM.fMag : state.fMag;
+      const yVal = isS2Mission ? curM.y : state.y;
+      const hideAnswer = isS2Mission && !state.s2Solved[state.s2Idx];
+
+      const basePxPerCm = Math.max(4.2, Math.min(viewport.w / 100, 9.2));
+      viewport.pxPerCm = basePxPerCm * state.zoom;
+      viewport.originX = viewport.w * 0.5;
+      viewport.originY = viewport.h * 0.5;
+
+      drawGridAndRuler();
+
+      const res = solveSingleOptic(devId, sVal, fMagVal, yVal);
+      const { dev, f, sp, yImg, isInfinity, isReal } = res;
+      const xO = -sVal;
+      const xImg = isInfinity ? Infinity : (dev.kind === 'mirror' ? -sp : sp);
+      const farCm = Math.max(85, (viewport.w / viewport.pxPerCm) * 0.85);
+
+      drawOpticalElement(devId, 0, -1, dev.name);
+
+      // จุด F, C / 2F, V / O
+      if (devId === 'plane_mirror') {
+        drawKeyPoint(0, 'V', '#0284C7', false);
+      } else {
+        const fAbs = Math.abs(f);
+        if (dev.kind === 'mirror') {
+          const fX = dev.sign > 0 ? -fAbs : fAbs;
+          drawKeyPoint(fX, 'F', '#059669', !isS2Mission && state.s1Mode === 'auto');
+          drawKeyPoint(fX * 2, 'C', '#475569', false);
+          drawKeyPoint(0, 'V', '#0284C7', false);
+        } else {
+          drawKeyPoint(-fAbs, 'F', '#059669', !isS2Mission && state.s1Mode === 'auto');
+          drawKeyPoint(fAbs, "F'", '#059669', !isS2Mission && state.s1Mode === 'auto');
+          drawKeyPoint(-2 * fAbs, '2F', '#475569', false);
+          drawKeyPoint(2 * fAbs, "2F'", '#475569', false);
+          drawKeyPoint(0, 'O', '#0284C7', false);
+        }
+      }
+
+      // ตัดสินใจว่าจะวาดรังสีแบบไหน
+      const isDrawMode = state.stage === 1 && state.s1Mode === 'draw';
+      const drawSteps = isDrawMode ? getStage1DrawSteps() : [];
+      const showRay1 = !hideAnswer && (!isDrawMode || state.drawStep >= 2);
+      const showRay2 = !hideAnswer && (!isDrawMode || state.drawStep >= 4);
+      const showRay1Inc = !hideAnswer && (!isDrawMode || state.drawStep >= 1);
+      const showRay2Inc = !hideAnswer && (!isDrawMode || state.drawStep >= 3);
+
+      // รังสีที่ 1 (แดง)
+      if (showRay1Inc) drawRaySegment(xO, yVal, 0, yVal, '#EF4444', false, true);
+      if (showRay1) {
+        if (devId === 'plane_mirror') {
+          drawRaySegment(0, yVal, -farCm, yVal, '#EF4444', false, true);
+          drawRaySegment(0, yVal, xImg, yImg, '#EF4444', true, false);
+        } else if (dev.kind === 'mirror') {
+          const slope1 = yVal / f;
+          drawRaySegment(0, yVal, -farCm, yVal + slope1 * (-farCm), '#EF4444', false, true);
+          if (!isReal && !isInfinity) drawRaySegment(0, yVal, xImg, yImg, '#EF4444', true, false);
+          else if (dev.sign < 0) drawRaySegment(0, yVal, -f, 0, '#EF4444', true, false);
+        } else {
+          const slope1 = -yVal / f;
+          drawRaySegment(0, yVal, farCm, yVal + slope1 * farCm, '#EF4444', false, true);
+          if (!isReal && !isInfinity) drawRaySegment(0, yVal, xImg, yImg, '#EF4444', true, false);
+        }
+      }
+
+      // รังสีที่ 2 (น้ำเงิน): ผ่าน V (กระจก) หรือ O (เลนส์)
+      if (showRay2Inc) drawRaySegment(xO, yVal, 0, 0, '#2563EB', false, true);
+      if (showRay2) {
+        if (dev.kind === 'mirror') {
+          const slopeRef = yVal / sVal;
+          drawRaySegment(0, 0, -farCm, -slopeRef * farCm, '#2563EB', false, true);
+          if (!isReal && !isInfinity) drawRaySegment(0, 0, xImg, yImg, '#2563EB', true, false);
+        } else {
+          const slope3 = -yVal / sVal;
+          drawRaySegment(0, 0, farCm, slope3 * farCm, '#2563EB', false, true);
+          if (!isReal && !isInfinity) drawRaySegment(0, 0, xImg, yImg, '#2563EB', true, false);
+        }
+      }
+
+      // วาดตัวช่วยและเส้นที่กำลังลากในโหมดฝึกวาดเอง (ด่านที่ 1)
+      if (isDrawMode && state.drawStep < 4) {
+        const curStep = drawSteps[state.drawStep];
+        const sx = toPxX(curStep.start.x), sy = toPxY(curStep.start.y);
+        const ex = toPxX(curStep.end.x), ey = toPxY(curStep.end.y);
+
+        // เส้นไกด์จางๆ และวงแหวนกะพริบ (เมื่อเปิดตัวช่วย)
+        if (state.guideEnabled) {
+          ctx.save();
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)'; ctx.lineWidth = 2.2;
+          ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+
+          const ringR = 14 + Math.sin(state.pulsePhase) * 4;
+          ctx.beginPath(); ctx.arc(ex, ey, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = '#F59E0B'; ctx.lineWidth = 2.5; ctx.stroke();
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.16)'; ctx.fill();
+          ctx.restore();
+        }
+
+        // จุดเริ่มต้น (Start Point) ให้แตะลากได้ชัดเจนเสมอ
+        ctx.save();
+        ctx.beginPath(); ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(37, 99, 235, 0.25)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#2563EB'; ctx.fill();
+        ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.8; ctx.stroke();
+        ctx.restore();
+
+        // เส้นที่นิ้วกำลังลากอยู่สดๆ
+        if (state.activeDragRay) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(state.activeDragRay.sx, state.activeDragRay.sy);
+          ctx.lineTo(state.activeDragRay.cx, state.activeDragRay.cy);
+          ctx.strokeStyle = curStep.color;
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // วาดวัตถุ (O)
+      drawArrowObject(xO, yVal, '#1E3A8A', 'วัตถุ O', false, !isS2Mission && !isDrawMode);
+
+      // วาดภาพ (I) และจุดตัดเรืองแสง เมื่อวาดครบหรืออยู่ในโหมดดูอัตโนมัติ/เฉลยแล้ว
+      const showImage = !hideAnswer && (!isDrawMode || state.drawStep >= 4);
+      if (showImage && !isInfinity) {
+        drawIntersectionGlow(xImg, yImg, isReal);
+        drawArrowObject(xImg, yImg, isReal ? '#059669' : '#9333EA', isReal ? 'ภาพจริง I' : 'ภาพเสมือน I', !isReal, false);
+      }
+
+      // วาดเส้นบอกระยะ s, s' ในด่าน 2
+      if (state.stage === 2) {
+        drawDimension(xO, 0, 34, `s = ${fmtNum(sVal, 1)} cm`, '#1E3A8A');
+        if (showImage && !isInfinity && Math.abs(xImg) < 120) {
+          drawDimension(0, xImg, 54, `s' = ${fmtSigned(sp, 1)} cm`, isReal ? '#059669' : '#9333EA');
+        }
+      }
+
+      // Overlay Badge
+      const badgeEl = document.getElementById('canvasOverlayBadge');
+      badgeEl.innerHTML = `
+        <span class="px-2.5 py-1 rounded-lg bg-white/92 backdrop-blur border border-slate-200 text-xs font-display font-semibold text-slate-800 shadow-xs">
+          ${dev.name} ${devId === 'plane_mirror' ? '' : `(f = ${fmtSigned(f, 1)} cm)`}
+        </span>
+        <span class="px-2.5 py-1 rounded-lg bg-white/92 backdrop-blur border border-slate-200 text-xs font-semibold text-blue-700 shadow-xs">
+          s = ${fmtNum(sVal, 1)} cm
+        </span>
+        ${hideAnswer
+          ? `<span class="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-800 shadow-xs">s' = ? (รอคำตอบ)</span>`
+          : (showImage ? `<span class="px-2.5 py-1 rounded-lg bg-white/92 border border-slate-200 text-xs font-semibold ${isReal ? 'text-emerald-700' : 'text-purple-700'} shadow-xs">s' = ${isInfinity ? '∞' : fmtSigned(sp, 1) + ' cm'}</span>` : '')}
+      `;
+    }
+
+    /** วาดด่านที่ 3 (ระบบทัศนอุปกรณ์คู่) */
+    function renderDualStage() {
+      const isMission = state.s3Sub === 'mission';
+      const cfg = isMission ? state.s3Missions[state.s3Idx] : state.dual;
+      const hideAnswer = isMission && !state.s3Solved[state.s3Idx];
+      const activeStep = isMission ? (hideAnswer ? 0 : 3) : state.s3Step;
+
+      const sol = solveDualOptics(cfg);
+      const { dev1, dev2, x1, x2, xO, res1, xI1, yI1, s2, res2, xI2, yI2, yO, d } = sol;
+
+      const spanNeeded = Math.max(108, d + cfg.s1 + 38);
+      const basePxPerCm = Math.max(3.2, Math.min(viewport.w / spanNeeded, 7.2));
+      viewport.pxPerCm = basePxPerCm * state.zoom;
+      viewport.originX = viewport.w * 0.5;
+      viewport.originY = viewport.h * 0.5;
+
+      drawGridAndRuler();
+
+      // ไฮไลต์โซนวางอุปกรณ์เมื่อกำลังลากจาก Palette
+      if (state.paletteDrag) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(37,99,235,0.08)';
+        ctx.fillRect(0, 0, viewport.w / 2, viewport.h);
+        ctx.fillStyle = 'rgba(147,51,234,0.08)';
+        ctx.fillRect(viewport.w / 2, 0, viewport.w / 2, viewport.h);
+        ctx.font = '700 14px Prompt, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#1D4ED8'; ctx.fillText('ปล่อยที่นี่ = อุปกรณ์ที่ 1', viewport.w * 0.25, 38);
+        ctx.fillStyle = '#7E22CE'; ctx.fillText('ปล่อยที่นี่ = อุปกรณ์ที่ 2', viewport.w * 0.75, 38);
+        ctx.restore();
+      }
+
+      drawOpticalElement(dev1.id, x1, dev1.kind === 'mirror' ? 1 : -1, `1. ${dev1.short}`);
+      drawOpticalElement(dev2.id, x2, -1, `2. ${dev2.short}`);
+
+      // จุดโฟกัส
+      if (dev1.id !== 'plane_mirror') {
+        const f1 = Math.abs(res1.f);
+        if (dev1.kind === 'lens') { drawKeyPoint(x1 - f1, 'F₁', '#2563EB'); drawKeyPoint(x1 + f1, "F₁'", '#2563EB'); }
+        else drawKeyPoint(x1 + res1.f, 'F₁', '#2563EB');
+      }
+      if (dev2.id !== 'plane_mirror') {
+        const f2 = Math.abs(res2.f);
+        if (dev2.kind === 'lens') { drawKeyPoint(x2 - f2, 'F₂', '#9333EA'); drawKeyPoint(x2 + f2, "F₂'", '#9333EA'); }
+        else drawKeyPoint(x2 - res2.f, 'F₂', '#9333EA');
+      }
+
+      // วาดรังสีตาม Stepper (activeStep: 0=ซ่อนเฉลย, 1=ขั้น1, 2=ขั้น2, 3=ครบ)
+      if (activeStep >= 1) {
+        const rayHeights = [yO, yO * 0.35];
+        const rayColors = ['#EF4444', '#2563EB'];
+        const farCm = Math.max(90, (viewport.w / viewport.pxPerCm) * 0.85);
+
+        rayHeights.forEach((h1, idx) => {
+          const col = rayColors[idx];
+          drawRaySegment(xO, yO, x1, h1, col, false, true);
+
+          const slope1 = res1.isInfinity
+            ? (dev1.id === 'plane_mirror' ? 0 : (-yO / res1.f))
+            : ((yI1 - h1) / (xI1 - x1));
+          const h2 = h1 + slope1 * (x2 - x1);
+
+          // ช่วงที่ 2 (จากอุปกรณ์ 1 -> อุปกรณ์ 2 หรือ I1)
+          drawRaySegment(x1, h1, x2, h2, col, false, true);
+          if (!res1.isInfinity && (xI1 < x1 || xI1 > x2)) {
+            drawRaySegment(xI1 < x1 ? x1 : x2, xI1 < x1 ? h1 : h2, xI1, yI1, '#10B981', true, false);
+          }
+
+          // ช่วงที่ 3 (หลังอุปกรณ์ 2 -> I2) แสดงเฉพาะ Step 3
+          if (activeStep >= 3) {
+            const dirOut = dev2.kind === 'lens' ? 1 : -1;
+            if (res2.isInfinity) {
+              const slope2 = dev2.id === 'plane_mirror' ? -slope1 : (dirOut * (-yI1 / res2.f));
+              drawRaySegment(x2, h2, x2 + dirOut * farCm, h2 + slope2 * (dirOut * farCm), col, false, true);
+            } else {
+              const dx2 = xI2 - x2;
+              const slope2 = Math.abs(dx2) < 1e-4 ? 0 : (yI2 - h2) / dx2;
+              drawRaySegment(x2, h2, x2 + dirOut * farCm, h2 + slope2 * (dirOut * farCm), col, false, true);
+              const isBehind = (dirOut > 0 && xI2 < x2) || (dirOut < 0 && xI2 > x2);
+              if (isBehind) drawRaySegment(x2, h2, xI2, yI2, col, true, false);
+            }
+          }
+        });
+      }
+
+      // เส้นบอกระยะ
+      drawDimension(x1, x2, 36, `d = ${fmtNum(d, 1)} cm`, '#334155');
+      if (activeStep >= 2 && !res1.isInfinity && Math.abs(xI1) < 140) {
+        drawDimension(x1, xI1, 56, `s'₁ = ${fmtSigned(res1.sp, 1)}`, '#059669');
+        drawDimension(xI1, x2, 76, `s₂ = ${fmtSigned(s2, 1)}`, s2 < 0 ? '#D97706' : '#7C3AED');
+      }
+
+      drawArrowObject(xO, yO, '#1E3A8A', 'O', false, !isMission);
+      if (activeStep >= 1 && !res1.isInfinity) {
+        drawArrowObject(xI1, yI1, '#059669', 'I₁', !res1.isReal, false);
+      }
+      if (activeStep >= 3 && !res2.isInfinity) {
+        drawIntersectionGlow(xI2, yI2, res2.isReal);
+        drawArrowObject(xI2, yI2, '#7C3AED', 'I₂ (สุดท้าย)', !res2.isReal, false);
+      }
+
+      document.getElementById('canvasOverlayBadge').innerHTML = `
+        <span class="px-2.5 py-1 rounded-lg bg-white/92 border border-slate-200 text-xs font-display font-semibold text-blue-700">1: ${dev1.short}</span>
+        <span class="px-2.5 py-1 rounded-lg bg-white/92 border border-slate-200 text-xs font-display font-semibold text-purple-700">2: ${dev2.short}</span>
+        <span class="px-2.5 py-1 rounded-lg bg-white/92 border border-slate-200 text-xs font-semibold text-slate-700">d = ${fmtNum(d, 1)} cm</span>
+      `;
+    }
+
+    function render() {
+      if (state.stage === 3) renderDualStage();
+      else renderSingleStage();
+    }
+
+    // Animation loop เบาๆ เฉพาะสำหรับวงแหวนกะพริบนำทาง/จุดตัด
+    function animatePulse() {
+      state.pulsePhase += 0.08;
+      if ((state.stage === 1 && state.s1Mode === 'draw') || (state.stage === 3 && state.s3Step === 3)) {
+        render();
+      }
+      requestAnimationFrame(animatePulse);
+    }
+
+    // ==================== 6. UI UPDATERS ====================
+    function updateHeaderBadges() {
+      const s2Done = state.s2Solved.filter(Boolean).length;
+      const s3Done = state.s3Solved.filter(Boolean).length;
+      document.getElementById('tabS2Prog').textContent = `(${s2Done}/3)`;
+      document.getElementById('tabS3Prog').textContent = `(${s3Done}/3)`;
+      document.getElementById('s2MissionBadge').textContent = `${s2Done}/3`;
+      document.getElementById('s3MissionBadge').textContent = `${s3Done}/3`;
+      document.getElementById('tabS3Icon').textContent = isStage3Unlocked() ? '3' : '🔒';
+      document.getElementById('s1CompletedCount').textContent = `${state.completedDevices.size}/5 อุปกรณ์`;
+
+      const tBtn = document.getElementById('teacherModeBtn');
+      const tLbl = document.getElementById('teacherModeLabel');
+      if (state.teacherMode) {
+        tBtn.className = 'inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-display font-semibold transition-all border border-amber-400 bg-amber-100 text-amber-900 shadow-xs active:scale-95';
+        tLbl.textContent = 'โหมดครู: เปิดอยู่';
+      } else {
+        tBtn.className = 'inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-display font-semibold transition-all border border-slate-200 bg-slate-50 text-slate-600 hover:bg-amber-50 active:scale-95';
+        tLbl.textContent = 'โหมดครู (ปลดล็อก)';
+      }
+    }
+
+    function updateStage1UI() {
+      const res = solveSingleOptic(state.device, state.s, state.fMag, state.y);
+      const desc = describeSingleImage(res);
+      const isDraw = state.s1Mode === 'draw';
+
+      document.getElementById('s1ModeDrawBtn').className = `py-2 px-2 rounded-lg text-xs sm:text-sm font-display font-semibold transition ${isDraw ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-white'}`;
+      document.getElementById('s1ModeAutoBtn').className = `py-2 px-2 rounded-lg text-xs sm:text-sm font-display font-semibold transition ${!isDraw ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-white'}`;
+
+      document.getElementById('drawBanner').classList.toggle('hidden', !isDraw);
+      if (isDraw) {
+        const steps = getStage1DrawSteps();
+        const stepNumEl = document.getElementById('drawStepNum');
+        const instEl = document.getElementById('drawInstructionText');
+        if (state.drawStep < 4) {
+          stepNumEl.textContent = `${state.drawStep + 1}`;
+          stepNumEl.className = 'w-6 h-6 rounded-full bg-blue-600 text-white font-display font-bold text-xs flex items-center justify-center shrink-0';
+          instEl.textContent = steps[state.drawStep].label;
+        } else {
+          stepNumEl.textContent = '✓';
+          stepNumEl.className = 'w-6 h-6 rounded-full bg-emerald-600 text-white font-display font-bold text-xs flex items-center justify-center shrink-0';
+          instEl.textContent = 'เยี่ยมมาก! วาดทางเดินแสงครบแล้ว สังเกตจุดตัดและภาพที่เกิดขึ้นด้านล่าง (กดเริ่มวาดใหม่หรือเปลี่ยนอุปกรณ์เพื่อฝึกต่อ)';
+        }
+        document.getElementById('toggleGuideBtn').textContent = state.guideEnabled ? '💡 ตัวช่วยลาก: เปิด' : '💡 ตัวช่วยลาก: ปิด';
+      }
+
+      document.getElementById('s1_s_val').textContent = `${fmtNum(state.s, 1)} cm`;
+      document.getElementById('s1_f_val').textContent = `${fmtNum(state.fMag, 1)} cm`;
+      document.getElementById('s1_s_slider').value = state.s;
+      document.getElementById('s1_f_slider').value = state.fMag;
+      document.getElementById('s1_f_group').classList.toggle('hidden', state.device === 'plane_mirror');
+      document.getElementById('s1_quickZones').classList.toggle('hidden', DEVICES[state.device].sign <= 0);
+
+      const showResult = !isDraw || state.drawStep >= 4;
+      document.getElementById('s1_pendingBox').classList.toggle('hidden', showResult);
+      document.getElementById('s1_resultBox').classList.toggle('hidden', !showResult);
+      document.getElementById('s1_zoneTag').textContent = desc.zoneTag;
+      document.getElementById('s1_propType').textContent = desc.type;
+      document.getElementById('s1_propOrient').textContent = desc.orient;
+      document.getElementById('s1_propSize').textContent = desc.size;
+      document.getElementById('s1_propPos').textContent = desc.pos;
+      document.getElementById('s1_explainText').innerHTML = desc.text;
+
+      syncDeviceButtonStyles();
+    }
+
+    function updateStage2UI() {
+      const isExplore = state.s2Sub === 'explore';
+      document.getElementById('s2SubExplore').className = `py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition ${isExplore ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`;
+      document.getElementById('s2SubMission').className = `py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition ${!isExplore ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`;
+      document.getElementById('s2ExploreView').classList.toggle('hidden', !isExplore);
+      document.getElementById('s2MissionView').classList.toggle('hidden', isExplore);
+
+      if (isExplore) {
+        const res = solveSingleOptic(state.device, state.s, state.fMag, state.y);
+        const { dev, f, R, s, sp, m, yImg, isInfinity, isReal, isUpright } = res;
+        const isPlane = dev.id === 'plane_mirror';
+        document.getElementById('s2_f_group').classList.toggle('hidden', isPlane);
+        document.getElementById('s2_R_group').classList.toggle('hidden', isPlane);
+        document.getElementById('s2_f_slider').value = state.fMag;
+        document.getElementById('s2_R_slider').value = state.fMag * 2;
+        document.getElementById('s2_s_slider').value = state.s;
+        document.getElementById('s2_y_slider').value = state.y;
+        document.getElementById('s2_f_val').textContent = isPlane ? '∞' : `${fmtSigned(f, 1)} cm`;
+        document.getElementById('s2_R_val').textContent = isPlane ? '∞' : `${fmtSigned(R, 1)} cm`;
+        document.getElementById('s2_s_val').textContent = `${fmtNum(s, 1)} cm`;
+        document.getElementById('s2_y_val').textContent = `${fmtNum(state.y, 1)} cm`;
+
+        document.getElementById('s2_out_sp').textContent = isInfinity ? '∞' : `${fmtSigned(sp, 2)} cm`;
+        document.getElementById('s2_out_m').textContent = isInfinity ? '∞' : fmtSigned(m, 2);
+        document.getElementById('s2_out_yp').textContent = isInfinity ? '∞' : `${fmtNum(Math.abs(yImg), 2)} cm`;
+
+        const badge = document.getElementById('s2_resultBadge');
+        badge.textContent = isInfinity ? 'ภาพที่อนันต์ (s = f)' : `${isReal ? 'ภาพจริง' : 'ภาพเสมือน'} • ${isUpright ? 'หัวตั้ง' : 'หัวกลับ'}`;
+        badge.className = `px-3 py-1 rounded-full text-xs font-display font-semibold border ${isInfinity ? 'bg-amber-50 text-amber-700 border-amber-200' : (isReal ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-purple-50 text-purple-700 border-purple-200')}`;
+
+        const box = document.getElementById('s2_stepsContainer');
+        if (isPlane) {
+          box.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 math-eq">กระจกเงาราบ (f = ∞): <b>s' = −s = −${fmtNum(s, 1)} cm</b>, กำลังขยาย <b>m = −1</b> (ภาพเสมือน หัวตั้ง ขนาดเท่าวัตถุ)</div>`;
+        } else if (isInfinity) {
+          box.innerHTML = `<div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200 math-eq">เนื่องจาก s = f = ${fmtNum(f, 1)} cm ⇒ ${fracHTML('1', "s'")} = 0 ⇒ <b>s' = ∞ (เกิดภาพที่ระยะอนันต์)</b></div>`;
+        } else {
+          const fS = fmtSigned(f, 1), sS = fmtNum(s, 1), spS = fmtSigned(sp, 2);
+          box.innerHTML = `
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 math-eq">
+              <p class="font-display font-semibold text-xs text-indigo-700">1. รัศมีความโค้ง</p>
+              R = 2f = 2(${fS}) = <b>${fmtSigned(R, 1)} cm</b>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 math-eq">
+              <p class="font-display font-semibold text-xs text-blue-700">2. หาระยะภาพ (s')</p>
+              ${fracHTML('1', 'f')} = ${fracHTML('1', 's')} + ${fracHTML('1', "s'")} ⇒ ${fracHTML('1', fS)} = ${fracHTML('1', sS)} + ${fracHTML('1', "s'")} ⇒ <b>s' = ${spS} cm</b>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 math-eq">
+              <p class="font-display font-semibold text-xs text-purple-700">3. หากำลังขยาย (m) และขนาดภาพ (y')</p>
+              m = ${fracHTML("s'", 's')} = ${fracHTML(spS, sS)} = <b>${fmtSigned(m, 2)}</b>, &nbsp; |y'| = |m|·y = <b>${fmtNum(Math.abs(yImg), 2)} cm</b>
+            </div>`;
+        }
+        syncDeviceButtonStyles();
+      } else {
+        renderStage2MissionCard();
+      }
+    }
+
+    function renderStage2MissionCard() {
+      const mObj = state.s2Missions[state.s2Idx];
+      const dev = DEVICES[mObj.deviceId];
+      const solved = state.s2Solved[state.s2Idx];
+      const allSolved = state.s2Solved.every(Boolean);
+
+      document.getElementById('s2mStepTag').textContent = `ภารกิจข้อที่ ${state.s2Idx + 1} / 3`;
+      document.getElementById('s2mProblemText').innerHTML = `
+        วางวัตถุสูง <b>${mObj.y} ซม.</b> ไว้ด้านหน้า<b>${dev.name}</b> ที่มีความยาวโฟกัสขนาด <b>${mObj.fMag} ซม.</b> (รัศมีความโค้ง ${mObj.fMag * 2} ซม.)
+        โดยวางวัตถุห่างจากอุปกรณ์เป็นระยะ <b>s = ${mObj.s} ซม.</b><br/>
+        <span class="text-blue-800 font-semibold">จงคำนวณหาระยะภาพ (s'), ขนาดกำลังขยาย (|m|) และระบุชนิดของภาพที่เกิดขึ้น</span>
+      `;
+      document.getElementById('s2mHintBox').innerHTML = `
+        <div>1) <b>${dev.name}</b> ต้องแทนค่าความยาวโฟกัส <b>f = ${fmtSigned(mObj.res.f, 0)} ซม.</b> (${dev.sign > 0 ? 'รวมแสงเป็นบวก' : 'กระจายแสงเป็นลบ'})</div>
+        <div>2) ใช้สมการ ${fracHTML('1', 'f')} = ${fracHTML('1', 's')} + ${fracHTML('1', "s'")} หรือ s' = ${fracHTML('s · f', 's − f')}</div>
+        <div>3) หากำลังขยายจาก |m| = |${fracHTML("s'", 's')}| และดูเครื่องหมายของ s' (บวก = ภาพจริงหัวกลับ, ลบ = ภาพเสมือนหัวตั้ง)</div>
+      `;
+
+      // ปุ่มชนิดภาพ
+      document.querySelectorAll('.s2m-type-btn').forEach(btn => {
+        const sel = state.s2SelectedType === btn.dataset.imgtype;
+        btn.className = `s2m-type-btn py-2.5 px-2 rounded-xl border text-xs font-display font-semibold transition ${sel ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-blue-50'}`;
+      });
+
+      // จุดแสดงความคืบหน้า 3 ข้อ
+      document.getElementById('s2mDots').innerHTML = state.s2Solved.map((ok, i) => `
+        <button type="button" onclick="jumpS2Mission(${i})" class="w-8 h-8 rounded-full text-xs font-display font-bold border transition ${ok ? 'bg-emerald-500 text-white border-emerald-600' : (i === state.s2Idx ? 'bg-blue-600 text-white border-blue-700' : 'bg-slate-100 text-slate-600 border-slate-300')}">
+          ${ok ? '✓' : i + 1}
+        </button>
+      `).join('');
+
+      document.getElementById('s2mNextBtn').classList.toggle('hidden', !solved || allSolved);
+      document.getElementById('s2mGoStage3Btn').classList.toggle('hidden', !allSolved);
+    }
+
+    window.jumpS2Mission = (idx) => {
+      state.s2Idx = idx;
+      clearS2Inputs();
+      updateAll();
+    };
+
+    function clearS2Inputs() {
+      document.getElementById('s2m_sp').value = '';
+      document.getElementById('s2m_m').value = '';
+      state.s2SelectedType = null;
+      document.getElementById('s2mFeedback').classList.add('hidden');
+      document.getElementById('s2mHintBox').classList.add('hidden');
+    }
+
+    function updateStage3UI() {
+      const isExplore = state.s3Sub === 'explore';
+      document.getElementById('s3SubExplore').className = `py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition ${isExplore ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`;
+      document.getElementById('s3SubMission').className = `py-2.5 px-3 rounded-xl font-display font-semibold text-xs sm:text-sm transition ${!isExplore ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`;
+      document.getElementById('s3ExploreView').classList.toggle('hidden', !isExplore);
+      document.getElementById('s3MissionView').classList.toggle('hidden', isExplore);
+      document.getElementById('s3PaletteBar').classList.toggle('hidden', !isExplore);
+      document.getElementById('s3StepperBar').classList.toggle('hidden', !isExplore);
+
+      if (isExplore) {
+        // อัปเดตปุ่ม Stepper
+        document.querySelectorAll('.s3-step-btn').forEach(btn => {
+          const st = Number(btn.dataset.s3step);
+          const act = st === state.s3Step;
+          btn.className = `s3-step-btn px-3 py-1.5 rounded-lg text-xs font-display font-semibold border transition active:scale-95 ${act ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-indigo-50'}`;
+        });
+
+        const { el1, el2, s1, d, f1Mag, f2Mag } = state.dual;
+        const sol = solveDualOptics();
+        const { dev1, dev2, res1, s2, isVirtualObject, res2, mTotal, yI2, yO } = sol;
+
+        document.getElementById('s3_el1').value = el1;
+        document.getElementById('s3_el2').value = el2;
+        document.getElementById('s3_s1_slider').value = s1;
+        document.getElementById('s3_d_slider').value = d;
+        document.getElementById('s3_f1_slider').value = f1Mag;
+        document.getElementById('s3_f2_slider').value = f2Mag;
+        document.getElementById('s3_s1_val').textContent = `${fmtNum(s1, 1)} cm`;
+        document.getElementById('s3_d_val').textContent = `${fmtNum(d, 1)} cm`;
+        document.getElementById('s3_f1_val').textContent = dev1.id === 'plane_mirror' ? '∞' : `${fmtSigned(dev1.sign * f1Mag, 1)} cm`;
+        document.getElementById('s3_f2_val').textContent = dev2.id === 'plane_mirror' ? '∞' : `${fmtSigned(dev2.sign * f2Mag, 1)} cm`;
+        document.getElementById('s3_f1_group').classList.toggle('hidden', dev1.id === 'plane_mirror');
+        document.getElementById('s3_f2_group').classList.toggle('hidden', dev2.id === 'plane_mirror');
+        document.getElementById('s3_virtualObjBadge').classList.toggle('hidden', !isVirtualObject);
+
+        const s1Txt = res1.isInfinity
+          ? `s₁ = f₁ ⇒ <b>s'₁ = ∞</b>`
+          : (dev1.id === 'plane_mirror'
+            ? `s'₁ = −s₁ = <b>−${fmtNum(s1, 1)} cm</b>, m₁ = −1`
+            : `${fracHTML('1', fmtSigned(res1.f, 1))} = ${fracHTML('1', fmtNum(s1, 1))} + ${fracHTML('1', "s'₁")} ⇒ <b class="text-emerald-700">s'₁ = ${fmtSigned(res1.sp, 2)} cm</b>, m₁ = <b>${fmtSigned(res1.m, 2)}</b>`);
+
+        let html = `<div class="p-3 rounded-xl bg-slate-50 border border-slate-200 math-eq"><p class="font-display font-semibold text-xs text-blue-700">ขั้นที่ 1: อุปกรณ์ที่ 1 (${dev1.name}) → ภาพ I₁</p>${s1Txt}</div>`;
+
+        if (state.s3Step >= 2) {
+          const bridge = res1.isInfinity
+            ? `s'₁ = ∞ ⇒ รังสีขนานเข้าสู่อุปกรณ์ที่ 2 (s₂ = ∞)`
+            : `s₂ = d − s'₁ = ${fmtNum(d, 1)} − (${fmtSigned(res1.sp, 2)}) = <b class="${isVirtualObject ? 'text-amber-700' : 'text-indigo-700'}">${fmtSigned(s2, 2)} cm</b> ${isVirtualObject ? '<span class="text-xs text-amber-700 font-semibold">(วัตถุเสมือน!)</span>' : '<span class="text-xs text-emerald-700">(วัตถุจริง)</span>'}`;
+          html += `<div class="p-3 rounded-xl bg-slate-50 border border-slate-200 math-eq"><p class="font-display font-semibold text-xs text-indigo-700">ขั้นที่ 2: หาระยะวัตถุของอุปกรณ์ที่ 2</p>${bridge}</div>`;
+        }
+
+        if (state.s3Step >= 3) {
+          let s2Txt = '';
+          if (res2.isInfinity) s2Txt = `<b>s'₂ = ∞ (ภาพสุดท้ายอยู่ที่ระยะอนันต์)</b>`;
+          else if (dev2.id === 'plane_mirror') s2Txt = `s'₂ = −s₂ = <b class="text-purple-700">${fmtSigned(res2.sp, 2)} cm</b>, m₂ = −1`;
+          else s2Txt = `${fracHTML('1', fmtSigned(res2.f, 1))} = ${fracHTML('1', fmtSigned(s2, 2))} + ${fracHTML('1', "s'₂")} ⇒ <b class="text-purple-700">s'₂ = ${fmtSigned(res2.sp, 2)} cm</b>, m₂ = <b>${fmtSigned(res2.m, 2)}</b>`;
+
+          const summary = !res2.isInfinity && Number.isFinite(mTotal)
+            ? `<div class="mt-2 pt-2 border-t border-purple-200 text-xs sm:text-sm text-purple-950"><b>สรุปภาพสุดท้าย I₂:</b> ${res2.isReal ? 'ภาพจริง' : 'ภาพเสมือน'} ${(yI2 * yO) > 0 ? 'หัวตั้ง' : 'หัวกลับ'} • กำลังขยายรวม <b>m<sub>รวม</sub> = m₁×m₂ = ${fmtSigned(mTotal, 2)}</b> (|m| = ${fmtNum(Math.abs(mTotal), 2)} เท่า)</div>`
+            : '';
+          html += `<div class="p-3 rounded-xl bg-purple-50/70 border border-purple-200 math-eq"><p class="font-display font-semibold text-xs text-purple-700">ขั้นที่ 3: อุปกรณ์ที่ 2 (${dev2.name}) → ภาพสุดท้าย I₂</p>${s2Txt}${summary}</div>`;
+        }
+        document.getElementById('s3_calcContainer').innerHTML = html;
+      } else {
+        renderStage3MissionCard();
+      }
+    }
+
+    function renderStage3MissionCard() {
+      const cfg = state.s3Missions[state.s3Idx];
+      const sol = solveDualOptics(cfg);
+      const solved = state.s3Solved[state.s3Idx];
+      const allSolved = state.s3Solved.every(Boolean);
+
+      document.getElementById('s3mStepTag').textContent = `ภารกิจระบบคู่ ข้อที่ ${state.s3Idx + 1} / 3`;
+      document.getElementById('s3mProblemText').innerHTML = `
+        วาง<b>${sol.dev1.name}</b> ${sol.dev1.id === 'plane_mirror' ? '' : `(ความยาวโฟกัสขนาด ${cfg.f1Mag} ซม.)`} และ <b>${sol.dev2.name}</b> ${sol.dev2.id === 'plane_mirror' ? '' : `(ความยาวโฟกัสขนาด ${cfg.f2Mag} ซม.)`}
+        ห่างกันเป็นระยะ <b>d = ${cfg.d} ซม.</b> โดยวางวัตถุไว้หน้าอุปกรณ์ที่ 1 เป็นระยะ <b>s₁ = ${cfg.s1} ซม.</b><br/>
+        <span class="text-purple-900 font-semibold">จงคำนวณหา s'₁, s₂, s'₂ และขนาดกำลังขยายรวม |m<sub>รวม</sub>|</span>
+      `;
+      document.getElementById('s3mHintBox').innerHTML = `
+        <div><b>ขั้นที่ 1:</b> คิดที่ ${sol.dev1.name} (f₁ = ${sol.dev1.id === 'plane_mirror' ? '∞' : fmtSigned(sol.res1.f, 0)} ซม., s₁ = ${cfg.s1} ซม.) ใช้ ${fracHTML('1', 'f₁')} = ${fracHTML('1', 's₁')} + ${fracHTML('1', "s'₁")} เพื่อหา s'₁ และ m₁ = ${fracHTML("s'₁", 's₁')}</div>
+        <div><b>ขั้นที่ 2:</b> นำ s'₁ มาหาระยะวัตถุของอุปกรณ์ที่ 2 ด้วยสูตร <b>s₂ = d − s'₁ = ${cfg.d} − s'₁</b> (หากได้ค่าติดลบแสดงว่าเป็นวัตถุเสมือน ให้แทนค่าติดลบลงสูตรต่อเลย!)</div>
+        <div><b>ขั้นที่ 3:</b> คิดที่ ${sol.dev2.name} (f₂ = ${sol.dev2.id === 'plane_mirror' ? '∞' : fmtSigned(sol.res2.f, 0)} ซม.) หา s'₂ และ m₂ = ${fracHTML("s'₂", 's₂')} แล้วคูณกันหา |m<sub>รวม</sub>| = |m₁ × m₂|</div>
+      `;
+
+      document.getElementById('s3mDots').innerHTML = state.s3Solved.map((ok, i) => `
+        <button type="button" onclick="jumpS3Mission(${i})" class="w-8 h-8 rounded-full text-xs font-display font-bold border transition ${ok ? 'bg-emerald-500 text-white border-emerald-600' : (i === state.s3Idx ? 'bg-purple-600 text-white border-purple-700' : 'bg-slate-100 text-slate-600 border-slate-300')}">
+          ${ok ? '✓' : i + 1}
+        </button>
+      `).join('');
+
+      document.getElementById('s3mNextBtn').classList.toggle('hidden', !solved || allSolved);
+      document.getElementById('s3mFinishBtn').classList.toggle('hidden', !allSolved);
+      document.getElementById('openCertBtn').classList.toggle('hidden', !allSolved);
+    }
+
+    window.jumpS3Mission = (idx) => {
+      state.s3Idx = idx;
+      clearS3Inputs();
+      updateAll();
+    };
+
+    function clearS3Inputs() {
+      ['sp1', 's2', 'sp2', 'mtot'].forEach(k => {
+        document.getElementById(`s3m_${k}`).value = '';
+        document.getElementById(`s3m_err_${k}`).textContent = '';
+      });
+      document.getElementById('s3mFeedback').classList.add('hidden');
+      document.getElementById('s3mHintBox').classList.add('hidden');
+    }
+
+    function updateAll() {
+      updateHeaderBadges();
+      if (state.stage === 1) updateStage1UI();
+      if (state.stage === 2) updateStage2UI();
+      if (state.stage === 3) updateStage3UI();
+      render();
+    }
+
+    // ==================== 7. MISSION CHECKING & CERTIFICATE ====================
+    function checkStage2Mission() {
+      const mObj = state.s2Missions[state.s2Idx];
+      const spIn = parseFloat(document.getElementById('s2m_sp').value);
+      const mIn = parseFloat(document.getElementById('s2m_m').value);
+      const typeIn = state.s2SelectedType;
+      const fb = document.getElementById('s2mFeedback');
+
+      if (Number.isNaN(spIn) || Number.isNaN(mIn) || !typeIn) {
+        showToast('กรุณากรอกตัวเลขให้ครบทั้ง s\', |m| และเลือกชนิดของภาพก่อนตรวจคำตอบครับ', 'warning', true);
+        return;
+      }
+
+      const okSp = Math.abs(spIn - mObj.res.sp) <= 0.35;
+      const okM = Math.abs(Math.abs(mIn) - Math.abs(mObj.res.m)) <= 0.15;
+      const expectedType = mObj.res.isReal ? 'real' : 'virtual';
+      const okType = typeIn === expectedType;
+
+      fb.classList.remove('hidden');
+      if (okSp && okM && okType) {
+        state.s2Solved[state.s2Idx] = true;
+        fb.className = 'rounded-xl p-3.5 text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-900';
+        fb.innerHTML = `✅ <b>ถูกต้องยอดเยี่ยม!</b> s' = ${fmtSigned(mObj.res.sp, 2)} ซม., |m| = ${fmtNum(Math.abs(mObj.res.m), 2)} เท่า (${mObj.res.isReal ? 'ภาพจริง หัวกลับ' : 'ภาพเสมือน หัวตั้ง'}) — ดูทางเดินแสงเฉลยบนภาพด้านบนได้เลย!`;
+        if (state.s2Solved.every(Boolean)) {
+          showToast('🎉 ยินดีด้วย! ทำภารกิจด่านที่ 2 ครบ 3/3 ข้อแล้ว ปลดล็อกด่านที่ 3 สำเร็จ!', 'success');
+        }
+        updateAll();
+      } else {
+        const errs = [];
+        if (!okSp) errs.push(`• ระยะภาพ s' ยังไม่ถูกต้อง (เช็คเครื่องหมาย f = ${fmtSigned(mObj.res.f, 0)} และสูตร 1/f = 1/s + 1/s')`);
+        if (!okM) errs.push(`• กำลังขยาย |m| ยังไม่ตรง (ใช้ |s'/s|)`);
+        if (!okType) errs.push(`• ชนิดภาพยังไม่ตรง (จำไว้ว่า s' > 0 คือภาพจริงหัวกลับ, s' < 0 คือภาพเสมือนหัวตั้ง)`);
+        fb.className = 'rounded-xl p-3.5 text-sm font-medium bg-rose-50 border border-rose-200 text-rose-900 animate-shake';
+        fb.innerHTML = `❌ <b>ยังไม่ถูกต้อง ลองตรวจเช็คดูอีกครั้งนะ:</b><br/>${errs.join('<br/>')}`;
+      }
+    }
+
+    function checkStage3Mission() {
+      const cfg = state.s3Missions[state.s3Idx];
+      const sol = solveDualOptics(cfg);
+      const vSp1 = parseFloat(document.getElementById('s3m_sp1').value);
+      const vS2  = parseFloat(document.getElementById('s3m_s2').value);
+      const vSp2 = parseFloat(document.getElementById('s3m_sp2').value);
+      const vM   = parseFloat(document.getElementById('s3m_mtot').value);
+
+      if ([vSp1, vS2, vSp2, vM].some(Number.isNaN)) {
+        showToast('กรุณากรอกคำตอบให้ครบทั้ง 4 ช่องก่อนตรวจคำตอบครับ', 'warning', true);
+        return;
+      }
+
+      const ok1 = Math.abs(vSp1 - sol.res1.sp) <= 0.4;
+      const ok2 = Math.abs(vS2 - sol.s2) <= 0.4;
+      const ok3 = Math.abs(vSp2 - sol.res2.sp) <= 0.45;
+      const ok4 = Math.abs(Math.abs(vM) - Math.abs(sol.mTotal)) <= 0.2;
+
+      const setFieldMsg = (id, ok, hint) => {
+        const el = document.getElementById(`s3m_err_${id}`);
+        el.textContent = ok ? '✓ ถูกต้อง' : `✗ ${hint}`;
+        el.className = `text-[11px] mt-1 font-semibold ${ok ? 'text-emerald-600' : 'text-rose-600'}`;
+      };
+      setFieldMsg('sp1', ok1, 'เช็ค 1/f₁ = 1/s₁ + 1/s\'₁');
+      setFieldMsg('s2',  ok2, 'ใช้ s₂ = d − s\'₁');
+      setFieldMsg('sp2', ok3, 'เช็ค 1/f₂ = 1/s₂ + 1/s\'₂');
+      setFieldMsg('mtot', ok4, 'ใช้ |m₁ × m₂|');
+
+      const fb = document.getElementById('s3mFeedback');
+      fb.classList.remove('hidden');
+      if (ok1 && ok2 && ok3 && ok4) {
+        state.s3Solved[state.s3Idx] = true;
+        fb.className = 'rounded-xl p-3.5 text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-900';
+        fb.innerHTML = `✅ <b>สุดยอด! คำนวณระบบคู่ถูกต้องครบทุกขั้นตอน!</b> s'₁ = ${fmtSigned(sol.res1.sp, 2)}, s₂ = ${fmtSigned(sol.s2, 2)}, s'₂ = ${fmtSigned(sol.res2.sp, 2)} ซม., |m<sub>รวม</sub>| = ${fmtNum(Math.abs(sol.mTotal), 2)} เท่า`;
+        updateAll();
+        if (state.s3Solved.every(Boolean)) {
+          openCertificateModal();
+        }
+      } else {
+        fb.className = 'rounded-xl p-3.5 text-sm font-medium bg-rose-50 border border-rose-200 text-rose-900 animate-shake';
+        fb.textContent = '❌ ยังมีบางช่องไม่ถูกต้อง ดูคำแนะนำสีแดงใต้ช่องคำตอบแล้วลองคำนวณใหม่อีกครั้งครับ';
+      }
+    }
+
+    function openCertificateModal() {
+      if (!state.certCode) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        state.certCode = `OPTI-${rand}`;
+        state.certTime = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+      }
+      document.getElementById('certS1Stat').textContent = `วาดแล้ว ${state.completedDevices.size}/5 อุปกรณ์`;
+      document.getElementById('certS2Stat').textContent = `${state.s2Solved.filter(Boolean).length}/3 ข้อ ✓`;
+      document.getElementById('certS3Stat').textContent = `${state.s3Solved.filter(Boolean).length}/3 ข้อ ✓`;
+      document.getElementById('certTime').textContent = state.certTime;
+      document.getElementById('certCode').textContent = state.certCode;
+      document.getElementById('certModal').classList.remove('hidden');
+    }
+
+    // ==================== 8. CANVAS POINTER & TOUCH INTERACTION ====================
+    function getPointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { px: e.clientX - rect.left, py: e.clientY - rect.top };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const { px, py } = getPointerPos(e);
+
+      // 1) ด่านที่ 1 โหมดฝึกวาดเอง
+      if (state.stage === 1 && state.s1Mode === 'draw') {
+        if (state.drawStep < 4) {
+          const steps = getStage1DrawSteps();
+          const cur = steps[state.drawStep];
+          const sx = toPxX(cur.start.x), sy = toPxY(cur.start.y);
+          if (Math.hypot(px - sx, py - sy) <= 44) {
+            state.dragging = 'draw_ray';
+            state.activeDragRay = { sx, sy, cx: px, cy: py };
+            canvas.setPointerCapture(e.pointerId);
+            hideToast();
+            render();
+            return;
+          } else {
+            showToast('แตะเริ่มลากจากจุดวงกลมสีน้ำเงิน (จุดเริ่มต้นของรังสีในขั้นตอนนี้) แล้วลากไปยังเป้าหมายครับ', 'info');
+            return;
+          }
+        }
+        return;
+      }
+
+      // 2) ด่านที่ 3 โหมดทดลองอิสระ (ลากวัตถุ หรือ อุปกรณ์ที่ 2)
+      if (state.stage === 3 && state.s3Sub === 'explore') {
+        const sol = solveDualOptics();
+        const objPx = toPxX(sol.xO), objPy = toPxY(sol.yO);
+        const el2Px = toPxX(sol.x2);
+        if (Math.hypot(px - objPx, py - objPy) < 30 || (Math.abs(px - objPx) < 22 && Math.abs(py - viewport.originY) < Math.abs(objPy - viewport.originY) + 16)) {
+          state.dragging = 'dual_obj';
+          canvas.setPointerCapture(e.pointerId);
+          return;
+        }
+        if (Math.abs(px - el2Px) < 24) {
+          state.dragging = 'dual_el2';
+          canvas.setPointerCapture(e.pointerId);
+          return;
+        }
+        return;
+      }
+
+      // 3) ด่านที่ 1 (Auto) หรือ ด่านที่ 2 (Explore): ลากวัตถุหรือจุดโฟกัส
+      if ((state.stage === 1 && state.s1Mode === 'auto') || (state.stage === 2 && state.s2Sub === 'explore')) {
+        const objPx = toPxX(-state.s), objPy = toPxY(state.y);
+        if (Math.hypot(px - objPx, py - objPy) < 30 || (Math.abs(px - objPx) < 22 && py <= viewport.originY + 18 && py >= objPy - 18)) {
+          state.dragging = 'obj';
+          canvas.setPointerCapture(e.pointerId);
+          return;
+        }
+        if (state.device !== 'plane_mirror') {
+          const dev = DEVICES[state.device];
+          const fPts = dev.kind === 'lens' ? [-state.fMag, state.fMag] : [dev.sign > 0 ? -state.fMag : state.fMag];
+          for (const fx of fPts) {
+            if (Math.hypot(px - toPxX(fx), py - viewport.originY) < 24) {
+              state.dragging = 'focal';
+              canvas.setPointerCapture(e.pointerId);
+              return;
+            }
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!state.dragging) return;
+      const { px, py } = getPointerPos(e);
+
+      if (state.dragging === 'draw_ray' && state.activeDragRay) {
+        state.activeDragRay.cx = px;
+        state.activeDragRay.cy = py;
+        render();
+        return;
+      }
+
+      const cmX = toCmX(px), cmY = toCmY(py);
+      if (state.dragging === 'obj') {
+        state.s = Math.max(5, Math.min(55, Math.round(-cmX * 2) / 2));
+        state.y = Math.max(3, Math.min(14, Math.round(cmY * 2) / 2));
+        updateAll();
+      } else if (state.dragging === 'focal') {
+        state.fMag = Math.max(6, Math.min(28, Math.round(Math.abs(cmX) * 2) / 2));
+        updateAll();
+      } else if (state.dragging === 'dual_obj') {
+        const sol = solveDualOptics();
+        const rawS1 = sol.dev1.kind === 'lens' ? (sol.x1 - cmX) : (cmX - sol.x1);
+        state.dual.s1 = Math.max(6, Math.min(55, Math.round(rawS1 * 2) / 2));
+        updateAll();
+      } else if (state.dragging === 'dual_el2') {
+        state.dual.d = Math.max(15, Math.min(80, Math.round(cmX * 4) / 2));
+        updateAll();
+      }
+    });
+
+    const handlePointerEnd = (e) => {
+      if (state.dragging === 'draw_ray' && state.activeDragRay) {
+        const steps = getStage1DrawSteps();
+        const cur = steps[state.drawStep];
+        const ex = toPxX(cur.end.x), ey = toPxY(cur.end.y);
+        const dist = Math.hypot(state.activeDragRay.cx - ex, state.activeDragRay.cy - ey);
+
+        // ยอมรับรัศมีใกล้เคียง ~36px เพื่อความลื่นไหลบนจอมือถือ
+        if (dist <= 38) {
+          state.drawStep++;
+          if (state.drawStep === 4) {
+            state.guidedCount++;
+            state.completedDevices.add(state.device);
+            showToast(`🎉 วาดทางเดินแสงของ${DEVICES[state.device].name}สำเร็จ! สังเกตจุดตัดของรังสีและภาพที่เกิดขึ้น`, 'success');
+            if (state.guidedCount === 3) {
+              state.guideEnabled = false;
+              showToast('👏 เก่งมาก! ฝึกครบ 3 ครั้งแล้ว ระบบปิดตัวช่วยอัตโนมัติเพื่อท้าทายความสามารถ (กดเปิดใหม่ได้ตลอดเวลา)', 'info');
+            }
+          }
+        } else {
+          showToast('ยังลากไม่ตรงแนวทางเดินแสง ลองลากใหม่อีกครั้ง หรือกดปุ่ม "เริ่มวาดใหม่" ครับ', 'error', true);
+        }
+        state.activeDragRay = null;
+        state.dragging = null;
+        updateAll();
+        return;
+      }
+      state.dragging = null;
+    };
+    canvas.addEventListener('pointerup', handlePointerEnd);
+    canvas.addEventListener('pointercancel', handlePointerEnd);
+
+    // ==================== 9. STAGE 3 PALETTE DRAG-TO-PLACE ====================
+    function buildStage3Palette() {
+      const wrap = document.getElementById('paletteChips');
+      wrap.innerHTML = '';
+      Object.values(DEVICES).forEach(dev => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'touch-none select-none inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-900 font-display font-semibold text-xs cursor-grab active:cursor-grabbing transition';
+        chip.innerHTML = `<span>${dev.kind === 'lens' ? '🔍' : '🪞'}</span><span>${dev.name}</span>`;
+
+        let startX = 0, startY = 0, moved = false;
+        chip.addEventListener('pointerdown', (e) => {
+          startX = e.clientX; startY = e.clientY; moved = false;
+          const ghost = chip.cloneNode(true);
+          ghost.classList.add('drag-ghost');
+          ghost.style.left = `${e.clientX}px`;
+          ghost.style.top = `${e.clientY}px`;
+          ghost.style.display = 'none';
+          document.body.appendChild(ghost);
+          state.paletteDrag = { devId: dev.id, ghostEl: ghost };
+
+          const onMove = (ev) => {
+            if (!state.paletteDrag) return;
+            if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 8) {
+              moved = true;
+              ghost.style.display = 'inline-flex';
+              render();
+            }
+            ghost.style.left = `${ev.clientX}px`;
+            ghost.style.top = `${ev.clientY}px`;
+          };
+          const onUp = (ev) => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+
+            if (moved) {
+              const rect = canvas.getBoundingClientRect();
+              if (ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
+                const isLeft = (ev.clientX - rect.left) < rect.width / 2;
+                if (isLeft) state.dual.el1 = dev.id;
+                else state.dual.el2 = dev.id;
+                showToast(`วาง ${dev.name} ในตำแหน่งอุปกรณ์ที่ ${isLeft ? 1 : 2} เรียบร้อยแล้ว`, 'info');
+              }
+            } else {
+              // แตะธรรมดา -> ใส่ในช่องที่เลือกไว้
+              if (state.s3ActiveSlot === 1) state.dual.el1 = dev.id;
+              else state.dual.el2 = dev.id;
+            }
+            state.paletteDrag = null;
+            updateAll();
+          };
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        });
+        wrap.appendChild(chip);
+      });
+    }
+
+    // ==================== 10. STAGE SWITCHING & AR CAMERA ====================
+    function buildDeviceButtons(containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      Object.values(DEVICES).forEach(dev => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.dev = dev.id;
+        btn.className = 'dev-select-btn px-3 py-2 rounded-xl border text-left transition-all active:scale-95';
+        btn.innerHTML = `
+          <div class="flex items-center justify-between gap-1">
+            <span class="font-display font-semibold text-xs sm:text-sm leading-tight">${dev.name}</span>
+            <span class="dev-check text-xs hidden">✓</span>
+          </div>
+          <div class="text-[11px] opacity-75 mt-0.5">${dev.id === 'plane_mirror' ? 'f = ∞' : (dev.sign > 0 ? 'รวมแสง (f > 0)' : 'กระจายแสง (f < 0)')}</div>
+        `;
+        btn.addEventListener('click', () => {
+          state.device = dev.id;
+          state.drawStep = 0;
+          state.activeDragRay = null;
+          hideToast();
+          updateAll();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function syncDeviceButtonStyles() {
+      document.querySelectorAll('.dev-select-btn').forEach(btn => {
+        const isSel = btn.dataset.dev === state.device;
+        const done = state.completedDevices.has(btn.dataset.dev);
+        btn.className = 'dev-select-btn px-3 py-2 rounded-xl border text-left transition-all active:scale-95 ' + (
+          isSel ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-blue-50'
+        );
+        const chk = btn.querySelector('.dev-check');
+        if (chk) chk.classList.toggle('hidden', !done);
+      });
+    }
+
+    function switchStage(stageNum) {
+      if (stageNum === 3 && !isStage3Unlocked()) {
+        showToast('🔒 ด่านที่ 3 ยังล็อกอยู่ — กรุณาทำภารกิจคำนวณในด่านที่ 2 ให้ครบ 3/3 ข้อก่อน (หรือคุณครูสามารถกดปุ่ม "โหมดครู" ด้านบนเพื่อปลดล็อกได้เลยครับ)', 'warning', true);
+        return;
+      }
+      state.stage = stageNum;
+      hideToast();
+
+      document.querySelectorAll('.stage-tab').forEach(tab => {
+        const act = Number(tab.dataset.stage) === stageNum;
+        tab.className = 'stage-tab flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2.5 px-2 rounded-xl font-display font-semibold text-xs sm:text-sm transition-all ' + (
+          act ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+        );
+        const b = tab.querySelector('.tab-badge');
+        b.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold tab-badge ' + (act ? 'bg-white text-blue-700' : 'bg-slate-200 text-slate-600');
+      });
+
+      document.getElementById('panelStage1').classList.toggle('hidden', stageNum !== 1);
+      document.getElementById('panelStage2').classList.toggle('hidden', stageNum !== 2);
+      document.getElementById('panelStage3').classList.toggle('hidden', stageNum !== 3);
+      if (stageNum !== 1) document.getElementById('drawBanner').classList.add('hidden');
+      if (stageNum !== 3) {
+        document.getElementById('s3PaletteBar').classList.add('hidden');
+        document.getElementById('s3StepperBar').classList.add('hidden');
+      }
+
+      const chip = document.getElementById('canvasModeChip');
+      const hint = document.getElementById('canvasHintText');
+      if (stageNum === 1) {
+        chip.textContent = state.s1Mode === 'draw' ? '✏️ โหมดฝึกวาดทางเดินแสง' : '⚡ โหมดดูทางเดินแสงอัตโนมัติ';
+        hint.textContent = state.s1Mode === 'draw' ? 'แตะจุดสีน้ำเงินแล้วลากไปยังวงแหวนเป้าหมาย' : 'ลากวัตถุ O หรือจุดโฟกัส F เพื่อดูการเปลี่ยนภาพ';
+      } else if (stageNum === 2) {
+        chip.textContent = state.s2Sub === 'explore' ? '🧪 ห้องทดลองสมการ' : '🎯 โหมดภารกิจด่านที่ 2';
+        hint.textContent = state.s2Sub === 'explore' ? 'ปรับค่าตัวแปรหรือลากวัตถุเพื่อดูการแทนค่าสูตรสด' : 'คำนวณค่าแล้วกรอกคำตอบด้านล่างเพื่อปลดล็อกด่าน 3';
+      } else {
+        chip.textContent = state.s3Sub === 'explore' ? '🔬 ระบบทัศนอุปกรณ์คู่' : '🏆 โหมดภารกิจระบบคู่';
+        hint.textContent = state.s3Sub === 'explore' ? 'ลากอุปกรณ์จากแถบด้านบน หรือลากวัตถุ/อุปกรณ์ 2 บนแกนได้' : 'คำนวณครบ 3 ข้อเพื่อรับใบรับรองคะแนนส่งครู';
+      }
+      updateAll();
+    }
+
+    async function toggleARMode() {
+      if (state.arActive) {
+        if (state.arStream) state.arStream.getTracks().forEach(t => t.stop());
+        state.arStream = null; state.arActive = false;
+        arVideo.srcObject = null; arVideo.classList.add('hidden');
+        arBackdropTint.classList.add('hidden');
+        document.getElementById('arControlsBar').classList.add('hidden');
+        document.getElementById('arToggleLabel').textContent = 'โหมด AR';
+        render();
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง AR (แนะนำเปิดผ่านมือถือแบบ HTTPS) สามารถใช้งานบนฉากขาวปกติได้เต็มระบบครับ', 'warning');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        state.arStream = stream; state.arActive = true;
+        arVideo.srcObject = stream; await arVideo.play();
+        arVideo.classList.remove('hidden'); arBackdropTint.classList.remove('hidden');
+        document.getElementById('arControlsBar').classList.remove('hidden');
+        document.getElementById('arToggleLabel').textContent = 'ปิดกล้อง AR';
+        render();
+      } catch {
+        showToast('ไม่สามารถเปิดกล้องได้ (อาจไม่ได้รับอนุญาตหรือไม่มีกล้องหลัง) — ใช้งานในโหมดฉากขาวได้ครบทุกฟีเจอร์ครับ', 'warning');
+      }
+    }
+
+    // ==================== 11. BIND EVENTS & BOOT ====================
+    function bindEvents() {
+      document.getElementById('arToggleBtn').addEventListener('click', toggleARMode);
+      document.getElementById('arOpacitySlider').addEventListener('input', (e) => {
+        state.arOpacity = Number(e.target.value);
+        document.getElementById('arOpacityVal').textContent = `${state.arOpacity}%`;
+        arBackdropTint.style.background = `rgba(255,255,255,${state.arOpacity / 100})`;
+      });
+      document.getElementById('toastClose').addEventListener('click', hideToast);
+
+      document.getElementById('teacherModeBtn').addEventListener('click', () => {
+        state.teacherMode = !state.teacherMode;
+        showToast(state.teacherMode ? '👩‍🏫 เปิดโหมดครูแล้ว: ปลดล็อกด่านที่ 3 สำหรับสาธิตหน้าชั้นเรียนเรียบร้อย' : 'ปิดโหมดครูแล้ว (กลับสู่ระบบล็อกด่านปกติของนักเรียน)', 'info');
+        updateAll();
+      });
+
+      document.querySelectorAll('.stage-tab').forEach(t => t.addEventListener('click', () => switchStage(Number(t.dataset.stage))));
+
+      // Zoom
+      document.getElementById('zoomInBtn').addEventListener('click', () => { state.zoom = Math.min(1.9, +(state.zoom + 0.15).toFixed(2)); document.getElementById('zoomResetBtn').textContent = `${Math.round(state.zoom * 100)}%`; render(); });
+      document.getElementById('zoomOutBtn').addEventListener('click', () => { state.zoom = Math.max(0.55, +(state.zoom - 0.15).toFixed(2)); document.getElementById('zoomResetBtn').textContent = `${Math.round(state.zoom * 100)}%`; render(); });
+      document.getElementById('zoomResetBtn').addEventListener('click', () => { state.zoom = 1.0; document.getElementById('zoomResetBtn').textContent = '100%'; render(); });
+
+      // Stage 1 controls
+      document.getElementById('s1ModeDrawBtn').addEventListener('click', () => { state.s1Mode = 'draw'; resetDrawing(); switchStage(1); });
+      document.getElementById('s1ModeAutoBtn').addEventListener('click', () => { state.s1Mode = 'auto'; switchStage(1); });
+      document.getElementById('toggleGuideBtn').addEventListener('click', () => { state.guideEnabled = !state.guideEnabled; updateAll(); });
+      document.getElementById('resetDrawBtn').addEventListener('click', resetDrawing);
+      document.getElementById('s1_s_slider').addEventListener('input', (e) => { state.s = Number(e.target.value); state.drawStep = 0; updateAll(); });
+      document.getElementById('s1_f_slider').addEventListener('input', (e) => { state.fMag = Number(e.target.value); state.drawStep = 0; updateAll(); });
+      document.querySelectorAll('.zone-btn').forEach(btn => btn.addEventListener('click', () => {
+        const f = state.fMag, z = btn.dataset.zone;
+        if (z === 'gt2f') state.s = Math.min(55, +(f * 2.5).toFixed(1));
+        if (z === 'eq2f') state.s = Math.min(55, +(f * 2).toFixed(1));
+        if (z === 'btwf2f') state.s = +(f * 1.45).toFixed(1);
+        if (z === 'eqf') state.s = f;
+        if (z === 'ltf') state.s = Math.max(5, +(f * 0.6).toFixed(1));
+        state.drawStep = 0; updateAll();
+      }));
+
+      // Stage 2 controls
+      document.getElementById('s2SubExplore').addEventListener('click', () => { state.s2Sub = 'explore'; switchStage(2); });
+      document.getElementById('s2SubMission').addEventListener('click', () => { state.s2Sub = 'mission'; switchStage(2); });
+      document.getElementById('s2_f_slider').addEventListener('input', (e) => { state.fMag = Number(e.target.value); updateAll(); });
+      document.getElementById('s2_R_slider').addEventListener('input', (e) => { state.fMag = Number(e.target.value) / 2; updateAll(); });
+      document.getElementById('s2_s_slider').addEventListener('input', (e) => { state.s = Number(e.target.value); updateAll(); });
+      document.getElementById('s2_y_slider').addEventListener('input', (e) => { state.y = Number(e.target.value); updateAll(); });
+
+      document.getElementById('s2mHintToggle').addEventListener('click', () => document.getElementById('s2mHintBox').classList.toggle('hidden'));
+      document.querySelectorAll('.s2m-type-btn').forEach(btn => btn.addEventListener('click', () => { state.s2SelectedType = btn.dataset.imgtype; renderStage2MissionCard(); }));
+      document.getElementById('s2mCheckBtn').addEventListener('click', checkStage2Mission);
+      document.getElementById('s2mNextBtn').addEventListener('click', () => {
+        const nextIdx = state.s2Solved.findIndex(v => !v);
+        state.s2Idx = nextIdx >= 0 ? nextIdx : (state.s2Idx + 1) % 3;
+        clearS2Inputs(); updateAll();
+      });
+      document.getElementById('s2mGoStage3Btn').addEventListener('click', () => switchStage(3));
+      document.getElementById('s2mRerollBtn').addEventListener('click', () => {
+        generateStage2Missions(); clearS2Inputs(); showToast('🎲 สุ่มชุดโจทย์ภารกิจด่านที่ 2 ใหม่ทั้ง 3 ข้อแล้ว!', 'info'); updateAll();
+      });
+
+      // Stage 3 controls
+      document.getElementById('s3SubExplore').addEventListener('click', () => { state.s3Sub = 'explore'; switchStage(3); });
+      document.getElementById('s3SubMission').addEventListener('click', () => { state.s3Sub = 'mission'; switchStage(3); });
+      document.getElementById('slotTarget1').addEventListener('click', () => {
+        state.s3ActiveSlot = 1;
+        document.getElementById('slotTarget1').className = 'px-2.5 py-1 rounded-lg font-display font-semibold bg-blue-600 text-white';
+        document.getElementById('slotTarget2').className = 'px-2.5 py-1 rounded-lg font-display font-semibold bg-slate-100 text-slate-600';
+      });
+      document.getElementById('slotTarget2').addEventListener('click', () => {
+        state.s3ActiveSlot = 2;
+        document.getElementById('slotTarget2').className = 'px-2.5 py-1 rounded-lg font-display font-semibold bg-purple-600 text-white';
+        document.getElementById('slotTarget1').className = 'px-2.5 py-1 rounded-lg font-display font-semibold bg-slate-100 text-slate-600';
+      });
+      document.querySelectorAll('.s3-step-btn').forEach(b => b.addEventListener('click', () => { state.s3Step = Number(b.dataset.s3step); updateAll(); }));
+      document.getElementById('s3_el1').addEventListener('change', (e) => { state.dual.el1 = e.target.value; updateAll(); });
+      document.getElementById('s3_el2').addEventListener('change', (e) => { state.dual.el2 = e.target.value; updateAll(); });
+      document.getElementById('s3_s1_slider').addEventListener('input', (e) => { state.dual.s1 = Number(e.target.value); updateAll(); });
+      document.getElementById('s3_d_slider').addEventListener('input', (e) => { state.dual.d = Number(e.target.value); updateAll(); });
+      document.getElementById('s3_f1_slider').addEventListener('input', (e) => { state.dual.f1Mag = Number(e.target.value); updateAll(); });
+      document.getElementById('s3_f2_slider').addEventListener('input', (e) => { state.dual.f2Mag = Number(e.target.value); updateAll(); });
+
+      const PRESETS = {
+        ll:      { el1: 'convex_lens',    el2: 'convex_lens',    s1: 25, d: 52, f1Mag: 15, f2Mag: 12 },
+        lv_virt: { el1: 'convex_lens',    el2: 'concave_lens',   s1: 30, d: 28, f1Mag: 20, f2Mag: 15 },
+        l_cm:    { el1: 'convex_lens',    el2: 'concave_mirror', s1: 20, d: 50, f1Mag: 12, f2Mag: 12 },
+        l_xm:    { el1: 'convex_lens',    el2: 'convex_mirror',  s1: 20, d: 50, f1Mag: 10, f2Mag: 15 },
+        l_pm:    { el1: 'convex_lens',    el2: 'plane_mirror',   s1: 25, d: 45, f1Mag: 15, f2Mag: 15 },
+        mm:      { el1: 'concave_mirror', el2: 'convex_mirror',  s1: 24, d: 40, f1Mag: 12, f2Mag: 12 },
+      };
+      document.querySelectorAll('.preset-btn').forEach(btn => btn.addEventListener('click', () => {
+        Object.assign(state.dual, PRESETS[btn.dataset.preset]);
+        state.s3Step = 3; updateAll();
+      }));
+
+      // Stage 3 Missions
+      document.getElementById('s3mHintToggle').addEventListener('click', () => document.getElementById('s3mHintBox').classList.toggle('hidden'));
+      document.getElementById('s3mCheckBtn').addEventListener('click', checkStage3Mission);
+      document.getElementById('s3mNextBtn').addEventListener('click', () => {
+        const nextIdx = state.s3Solved.findIndex(v => !v);
+        state.s3Idx = nextIdx >= 0 ? nextIdx : (state.s3Idx + 1) % 3;
+        clearS3Inputs(); updateAll();
+      });
+      document.getElementById('s3mFinishBtn').addEventListener('click', openCertificateModal);
+      document.getElementById('openCertBtn').addEventListener('click', openCertificateModal);
+      document.getElementById('s3mRerollBtn').addEventListener('click', () => {
+        generateStage3Missions(); clearS3Inputs(); showToast('🎲 สุ่มชุดโจทย์ระบบคู่ใหม่ทั้ง 3 ข้อแล้ว!', 'info'); updateAll();
+      });
+
+      // Certificate Modal
+      const closeCert = () => document.getElementById('certModal').classList.add('hidden');
+      document.getElementById('certCloseBtn').addEventListener('click', closeCert);
+      document.getElementById('certDoneBtn').addEventListener('click', closeCert);
+      document.getElementById('certNewRoundBtn').addEventListener('click', () => {
+        state.certCode = '';
+        generateStage2Missions();
+        generateStage3Missions();
+        clearS2Inputs();
+        clearS3Inputs();
+        closeCert();
+        switchStage(2);
+        state.s2Sub = 'mission';
+        switchStage(2);
+        showToast('🎲 เริ่มภารกิจรอบใหม่ด้วยชุดตัวเลขสุ่มใหม่ทั้งหมดแล้ว!', 'info');
+      });
+
+      window.addEventListener('resize', resizeCanvas);
+    }
+
+    window.addEventListener('load', () => {
+      buildDeviceButtons('stage1DeviceGrid');
+      buildDeviceButtons('stage2DeviceGrid');
+      buildStage3Palette();
+      generateStage2Missions();
+      generateStage3Missions();
+      bindEvents();
+      switchStage(1);
+      resizeCanvas();
+      requestAnimationFrame(animatePulse);
+    });
+  </script>
+</body>
+</html>

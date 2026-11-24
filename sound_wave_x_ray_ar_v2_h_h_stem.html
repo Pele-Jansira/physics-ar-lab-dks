@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sound Wave X-Ray AR v2 | หลอดเรโซแนนซ์และท่อปลายเปิด–ปิด (H&H+STEM ฟิสิกส์ ม.5)</title>
+
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Prompt"', 'sans-serif'],
+          },
+          colors: {
+            lab: {
+              bg: '#020617',      // slate-950
+              panel: '#0F172A',   // slate-900
+              card: '#1E293B',    // slate-800
+              cyan: '#22D3EE',
+              emerald: '#10B981',
+              amber: '#F59E0B',
+              rose: '#F43F5E'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* พื้นหลังตารางพิมพ์เขียว Dark Lab */
+    .lab-blueprint {
+      background-color: #020617;
+      background-image:
+        linear-gradient(rgba(34, 211, 238, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 211, 238, 0.08) 1px, transparent 1px),
+        linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+      background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+    }
+
+    /* Custom Range Slider สำหรับหน้าจอสัมผัส */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(148, 163, 184, 0.22);
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #22D3EE;
+      border: 3px solid #020617;
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.75);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.18);
+    }
+    input[type="range"].emerald-slider::-webkit-slider-thumb {
+      background: #10B981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.75);
+    }
+    input[type="range"].amber-slider::-webkit-slider-thumb {
+      background: #F59E0B;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.75);
+    }
+
+    /* แอนิเมชันแถบเสียง Equalizer */
+    @keyframes eqPulse {
+      0%, 100% { height: 4px; }
+      50% { height: 18px; }
+    }
+    .eq-bar {
+      animation: eqPulse 0.55s ease-in-out infinite;
+    }
+    .eq-bar:nth-child(2) { animation-delay: 0.14s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.28s; }
+    .eq-bar:nth-child(4) { animation-delay: 0.42s; }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+
+<body class="bg-lab-bg text-slate-100 font-sans min-h-screen antialiased selection:bg-cyan-500/30 selection:text-white">
+
+  <!-- Toast แจ้งเตือนแบบนุ่มนวล -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- แถบหัวเรื่องหลัก -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
+      <!-- โลโก้และชื่อแอป -->
+      <div class="flex items-center gap-3 w-full md:w-auto">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_16px_rgba(34,211,238,0.22)] shrink-0">
+          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-lg font-bold text-white flex items-center gap-2 truncate">
+            <span>Sound Wave X-Ray AR</span>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">v2</span>
+            <span class="hidden sm:inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/35">H&H+STEM ม.5</span>
+          </h1>
+          <p class="text-xs text-slate-400 truncate">การสั่นพ้องของเสียงในหลอดเรโซแนนซ์ ท่อปลายเปิด และท่อปลายปิด</p>
+        </div>
+      </div>
+
+      <!-- สลับมุมมอง Lab Mode / AR Camera Mode -->
+      <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700/80 w-full md:w-auto">
+        <button id="btn-view-lab" onclick="setViewMode('lab')" class="flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 bg-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.4)]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <span>Lab Mode (พิมพ์เขียว)</span>
+        </button>
+        <button id="btn-view-ar" onclick="setViewMode('ar')" class="flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 text-slate-300 hover:text-white">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>AR Camera Mode</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- แถบสลับ 2 โหมดการเรียนรู้ (โหมด A / โหมด B) -->
+    <div class="bg-slate-900/90 border-t border-slate-800/90">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex gap-2">
+        <button id="btn-learn-a" onclick="setLearningMode('resonance')" class="flex-1 py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-emerald-500/20 text-emerald-300 border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+          <span>🔊</span>
+          <span>โหมด A: หลอดเรโซแนนซ์ (เลื่อนฟังเสียงดัง–เบา)</span>
+        </button>
+        <button id="btn-learn-b" onclick="setLearningMode('explorer')" class="flex-1 py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-slate-800/70 text-slate-300 border border-slate-700 hover:border-slate-500">
+          <span>🎺</span>
+          <span>โหมด B: สำรวจท่อปลายเปิด–ปิด</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- เนื้อหาหลัก -->
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+
+    <!-- แถวบน: จอแสดงผล Canvas/AR + แผงควบคุม -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+
+      <!-- คอลัมน์ซ้าย (7 คอลัมน์บนจอใหญ่): จอจำลอง/AR + แผง Overlay AR + ตารางบันทึกค่า (โหมด A) -->
+      <div class="lg:col-span-7 flex flex-col gap-3.5">
+
+        <!-- กล่อง Viewport หลัก -->
+        <div id="viewport-container" class="relative w-full h-[390px] sm:h-[460px] lg:h-[510px] rounded-2xl overflow-hidden border border-cyan-500/35 shadow-[0_0_30px_rgba(34,211,238,0.1)] lab-blueprint select-none">
+
+          <!-- กล้องจริง (แสดงเฉพาะโหมด AR) -->
+          <video id="ar-video" autoplay playsinline muted class="hidden absolute inset-0 w-full h-full object-cover"></video>
+
+          <!-- Canvas 60fps -->
+          <canvas id="sim-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+
+          <!-- HUD มุมซ้ายบน: ป้ายสถานะ -->
+          <div class="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-1.5 sm:gap-2 max-w-[75%] pointer-events-none">
+            <span id="hud-primary-badge" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/85 backdrop-blur border border-cyan-400/40 text-cyan-300">
+              หลอดเรโซแนนซ์ • f = 680 Hz
+            </span>
+            <span id="hud-status-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-950/85 backdrop-blur border border-amber-400/50 text-amber-300 transition-colors">
+              เลื่อนหาจุดเสียงดัง...
+            </span>
+          </div>
+
+          <!-- HUD มุมขวาบน: ปุ่มสลับแนวท่อ, สลับกล้อง, หยุด/เล่น -->
+          <div class="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+            <button id="btn-orientation" onclick="toggleOrientation()" title="สลับแนวตั้ง / แนวนอน" class="px-2.5 py-1.5 rounded-lg bg-slate-950/85 hover:bg-slate-800 text-cyan-300 border border-cyan-400/40 backdrop-blur text-xs font-medium transition">
+              <span id="orient-label">↕ แนวตั้ง</span>
+            </button>
+            <button id="btn-switch-cam" onclick="switchCamera()" title="สลับกล้องหน้า/หลัง" class="hidden p-1.5 rounded-lg bg-slate-950/85 hover:bg-slate-800 text-amber-300 border border-amber-400/40 backdrop-blur transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button id="btn-toggle-anim" onclick="toggleAnimation()" title="หยุด/เล่นแอนิเมชัน" class="px-2.5 py-1.5 rounded-lg bg-slate-950/85 hover:bg-slate-800 text-slate-200 border border-slate-600 backdrop-blur text-xs font-medium transition">
+              <span id="icon-anim">⏸</span>
+            </button>
+          </div>
+
+          <!-- แบนเนอร์แจ้งเตือนเมื่อเปิดกล้อง AR ไม่ได้ -->
+          <div id="ar-fallback-banner" class="hidden absolute inset-x-3 top-14 z-20 bg-slate-950/95 border border-amber-500/60 rounded-xl p-3 text-xs text-amber-200 shadow-xl flex items-start gap-2.5">
+            <span class="text-base shrink-0">📷</span>
+            <div class="flex-1">
+              <p class="font-semibold text-amber-400">ไม่สามารถเปิดกล้องได้ในอุปกรณ์หรือเบราว์เซอร์นี้</p>
+              <p id="ar-error-text" class="text-slate-300 mt-0.5">กรุณาอนุญาตสิทธิ์การใช้กล้อง หรือใช้งานต่อใน Lab Mode (พิมพ์เขียว) ได้เต็มรูปแบบครับ</p>
+            </div>
+            <button onclick="setViewMode('lab')" class="px-2.5 py-1.5 rounded-lg bg-amber-400 text-slate-950 font-semibold shrink-0">กลับ Lab Mode</button>
+          </div>
+
+          <!-- แถบสลับชั้นข้อมูล (Layers) ด้านล่างซ้าย -->
+          <div class="absolute bottom-3 left-3 z-10 flex flex-wrap gap-1.5">
+            <button id="toggle-wave" onclick="toggleLayer('wave')" class="px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 backdrop-blur transition">
+              〰 คลื่นนิ่ง
+            </button>
+            <button id="toggle-particles" onclick="toggleLayer('particles')" class="px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 backdrop-blur transition">
+              •• อนุภาคอากาศ
+            </button>
+            <button id="toggle-labels" onclick="toggleLayer('labels')" class="px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 backdrop-blur transition">
+              🏷 ป้าย N / A
+            </button>
+          </div>
+        </div>
+
+        <!-- แผงควบคุม AR Overlay (แสดงเมื่ออยู่ใน AR Camera Mode) -->
+        <div id="ar-controls-panel" class="hidden bg-slate-900 rounded-2xl border border-amber-500/40 p-4 shadow-lg space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <h3 class="text-xs sm:text-sm font-bold text-amber-300">ปรับ AR Overlay ให้ทาบกับท่อ PVC / หลอดจริง</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="setOrientation('vertical')" id="btn-ar-vert" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50">↕ แนวตั้ง (จุ่มน้ำ)</button>
+              <button onclick="setOrientation('horizontal')" id="btn-ar-horiz" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">↔ แนวนอน (ลูกสูบ/หลอด)</button>
+              <button onclick="resetAROverlay()" class="px-2.5 py-1 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600">รีเซ็ต</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300">ขนาดซ้อนทับ (Scale)</span>
+                <span id="val-ar-scale" class="font-bold text-amber-300">100%</span>
+              </div>
+              <input id="input-ar-scale" type="range" min="50" max="150" step="5" value="100" class="w-full amber-slider" oninput="updateAROverlay()">
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-300">ความโปร่งใสตัวท่อ (Opacity)</span>
+                <span id="val-ar-opacity" class="font-bold text-amber-300">50%</span>
+              </div>
+              <input id="input-ar-opacity" type="range" min="0" max="100" step="5" value="50" class="w-full amber-slider" oninput="updateAROverlay()">
+            </div>
+          </div>
+        </div>
+
+        <!-- ตารางบันทึกจุดเสียงดัง L1, L2, L3 (แสดงเฉพาะโหมด A) -->
+        <div id="resonance-log-panel" class="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-lg space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <span class="text-emerald-400">📌</span> ตารางบันทึกตำแหน่งเสียงดังที่สุด (L₁, L₂, L₃)
+              </h3>
+              <p class="text-[11px] text-slate-400">เลื่อนระยะ L จนได้ยินเสียงดังก้องที่สุด แล้วกดปุ่มบันทึกเพื่อคำนวณหาอัตราเร็วเสียง (v)</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="recordResonancePeak()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm shadow-[0_0_14px_rgba(16,185,129,0.35)] transition flex items-center gap-1.5">
+                <span>📌</span>
+                <span id="btn-record-label">บันทึกจุด L₁</span>
+              </button>
+              <button onclick="clearRecordedPeaks()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition">
+                ล้างข้อมูล
+              </button>
+            </div>
+          </div>
+
+          <!-- รายการจุดที่บันทึก -->
+          <div id="recorded-peaks-list" class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/80 text-center">
+              <p class="text-[11px] text-slate-400">ครั้งที่ 1 (L₁)</p>
+              <p id="rec-L1" class="text-base font-bold text-slate-500 mt-0.5">-- cm</p>
+            </div>
+            <div class="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/80 text-center">
+              <p class="text-[11px] text-slate-400">ครั้งที่ 2 (L₂)</p>
+              <p id="rec-L2" class="text-base font-bold text-slate-500 mt-0.5">-- cm</p>
+            </div>
+            <div class="bg-slate-800/70 rounded-xl p-2.5 border border-slate-700/80 text-center">
+              <p class="text-[11px] text-slate-400">ครั้งที่ 3 (L₃)</p>
+              <p id="rec-L3" class="text-base font-bold text-slate-500 mt-0.5">-- cm</p>
+            </div>
+          </div>
+
+          <!-- ผลคำนวณอัตโนมัติจากจุดที่บันทึก -->
+          <div id="recorded-calc-box" class="bg-slate-950/70 rounded-xl p-3 border border-slate-800 text-xs space-y-1.5">
+            <p class="text-slate-400 text-center">บันทึกตำแหน่งเสียงดังอย่างน้อย 2 จุด (L₁ และ L₂) เพื่อคำนวณ ΔL, λ และ v อัตโนมัติ</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- คอลัมน์ขวา (5 คอลัมน์บนจอใหญ่): แผงควบคุมตามโหมด A หรือ โหมด B -->
+      <div class="lg:col-span-5 bg-slate-900 rounded-2xl border border-slate-800 p-4 sm:p-5 flex flex-col justify-between gap-4 shadow-xl">
+
+        <!-- ==================== แผงควบคุม โหมด A: หลอดเรโซแนนซ์ ==================== -->
+        <div id="controls-mode-a" class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="text-emerald-400">🎛</span> ควบคุมหลอดเรโซแนนซ์ (ท่อปลายปิด)
+            </h2>
+            <span class="text-[11px] text-slate-400">โหมด A</span>
+          </div>
+
+          <!-- เลือกรูปแบบชุดทดลองท่อปลายปิด -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-2">รูปแบบท่อปลายปิด (เลือกให้ตรงกับอุปกรณ์ที่บ้าน)</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-style-water" onclick="setResonanceStyle('water')" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.18)]">
+                💧 ท่อ PVC จุ่มน้ำ
+              </button>
+              <button id="btn-style-piston" onclick="setResonanceStyle('piston')" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500">
+                🔧 ลูกสูบก้านชัก
+              </button>
+            </div>
+          </div>
+
+          <!-- ความถี่แหล่งกำเนิดเสียงคงที่ f -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="input-res-freq" class="text-xs font-medium text-slate-300">ความถี่แหล่งกำเนิดเสียง (f คงที่)</label>
+              <span class="text-sm font-bold text-amber-400"><span id="val-res-freq">680</span> Hz</span>
+            </div>
+            <input id="input-res-freq" type="range" min="300" max="1200" step="1" value="680" class="w-full amber-slider" oninput="updateResonancePhysics()">
+            <div class="grid grid-cols-4 gap-1.5 mt-2">
+              <button onclick="setResFreqPreset(512)" class="py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400/50 text-xs font-medium text-slate-200 transition">512 Hz</button>
+              <button onclick="setResFreqPreset(680)" class="py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400/50 text-xs font-medium text-slate-200 transition">680 Hz</button>
+              <button onclick="setResFreqPreset(850)" class="py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400/50 text-xs font-medium text-slate-200 transition">850 Hz</button>
+              <button onclick="setResFreqPreset(1024)" class="py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400/50 text-xs font-medium text-slate-200 transition">1024 Hz</button>
+            </div>
+          </div>
+
+          <!-- เลื่อนระยะความยาวลำอากาศ L -->
+          <div class="bg-slate-950/70 rounded-xl p-3.5 border border-emerald-500/30 space-y-2.5">
+            <div class="flex justify-between items-center">
+              <label for="input-res-L" class="text-xs font-semibold text-emerald-300">เลื่อนระยะลำอากาศ (L)</label>
+              <span class="text-lg font-bold text-emerald-400"><span id="val-res-L">12.7</span> cm</span>
+            </div>
+            <input id="input-res-L" type="range" min="5.0" max="100.0" step="0.1" value="12.7" class="w-full emerald-slider" oninput="updateResonancePhysics()">
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <button onclick="nudgeResLength(-0.5)" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-600 text-xs sm:text-sm font-bold text-white transition">
+                − 0.5 cm
+              </button>
+              <button onclick="nudgeResLength(-0.1)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition">
+                −0.1
+              </button>
+              <button onclick="nudgeResLength(0.1)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition">
+                +0.1
+              </button>
+              <button onclick="nudgeResLength(0.5)" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-600 text-xs sm:text-sm font-bold text-white transition">
+                + 0.5 cm
+              </button>
+            </div>
+          </div>
+
+          <!-- แถบวัดความดังเสียง (Sound Intensity Meter / dB) -->
+          <div class="bg-slate-950/70 rounded-xl p-3.5 border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-300">มาตรวัดความดังเสียง (Sound Intensity)</span>
+              <span id="val-db-text" class="text-sm font-bold text-emerald-400">84.2 dB</span>
+            </div>
+            <div class="w-full h-3.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700 p-0.5">
+              <div id="db-meter-bar" class="h-full rounded-full transition-all duration-75 bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-400" style="width: 92%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-400">
+              <span>🔇 เบาสุด (หักล้าง)</span>
+              <span id="meter-status-text" class="font-semibold text-emerald-300">🔊 เสียงดังที่สุด! สั่นพ้องครั้งที่ 1 (L₁)</span>
+              <span>🔊 ดังสุด</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== แผงควบคุม โหมด B: สำรวจท่อปลายเปิด-ปิด ==================== -->
+        <div id="controls-mode-b" class="hidden space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="text-cyan-400">🎺</span> สำรวจท่อปลายเปิด–ปิด (ความถี่ธรรมชาติ)
+            </h2>
+            <span class="text-[11px] text-slate-400">โหมด B</span>
+          </div>
+
+          <!-- ชนิดท่อ -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-2">ชนิดของท่อ (Pipe Type)</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-exp-open" onclick="setExplorerPipeType('open')" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-cyan-500/20 border-cyan-400 text-cyan-300">
+                ท่อปลายเปิด (Open)
+              </button>
+              <button id="btn-exp-closed" onclick="setExplorerPipeType('closed')" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500">
+                ท่อปลายปิด (Closed)
+              </button>
+            </div>
+          </div>
+
+          <!-- ฮาร์มอนิก n -->
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-medium text-slate-300">ลำดับฮาร์มอนิก (n)</label>
+              <span id="exp-harmonic-hint" class="text-[11px] text-cyan-300">ท่อปลายเปิด: n = 1, 2, 3, 4</span>
+            </div>
+            <div id="exp-harmonic-buttons" class="grid grid-cols-4 gap-2"></div>
+          </div>
+
+          <!-- ความยาวท่อ L + Preset วัสดุใกล้ตัว -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="input-exp-L" class="text-xs font-medium text-slate-300">ความยาวท่อ (L)</label>
+              <span class="text-sm font-bold text-cyan-400"><span id="val-exp-L">35</span> cm</span>
+            </div>
+            <input id="input-exp-L" type="range" min="10" max="100" step="1" value="35" class="w-full" oninput="updateExplorerPhysics()">
+            <div class="grid grid-cols-3 gap-1.5 mt-2.5">
+              <button onclick="setExpLengthPreset(20)" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-cyan-500/20 border border-slate-700 hover:border-cyan-400/50 text-[11px] text-slate-200 transition text-center">
+                🥤 หลอดชานม<br><span class="text-cyan-400 font-bold">20 cm</span>
+              </button>
+              <button onclick="setExpLengthPreset(35)" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-cyan-500/20 border border-slate-700 hover:border-cyan-400/50 text-[11px] text-slate-200 transition text-center">
+                🔧 PVC สั้น<br><span class="text-cyan-400 font-bold">35 cm</span>
+              </button>
+              <button onclick="setExpLengthPreset(60)" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-cyan-500/20 border border-slate-700 hover:border-cyan-400/50 text-[11px] text-slate-200 transition text-center">
+                📏 PVC ยาว<br><span class="text-cyan-400 font-bold">60 cm</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- การ์ดแสดงความถี่และโน้ตดนตรี -->
+          <div class="bg-slate-950/70 rounded-xl p-3.5 border border-cyan-500/30 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-slate-400">ความถี่ธรรมชาติที่คำนวณได้</p>
+              <p class="text-xl font-bold text-cyan-400"><span id="exp-freq-display">494.3</span> Hz</p>
+            </div>
+            <div class="text-right">
+              <p class="text-[11px] text-slate-400">โน้ตดนตรีใกล้เคียง</p>
+              <p id="exp-note-display" class="text-xl font-bold text-emerald-400">B4</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== ส่วนควบคุมร่วม: อุณหภูมิ + ปุ่มเปิดเสียง ==================== -->
+        <div class="space-y-3.5 pt-3 border-t border-slate-800">
+          <!-- อุณหภูมิอากาศ t (ใช้ร่วมกันทั้ง 2 โหมด) -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="input-temp" class="text-xs font-medium text-slate-300">อุณหภูมิอากาศ (t)</label>
+              <span class="text-xs font-semibold text-amber-400">
+                <span id="val-temp">25.0</span> °C &nbsp;•&nbsp; v = <span id="val-speed-mini">346.0</span> m/s
+              </span>
+            </div>
+            <input id="input-temp" type="range" min="15" max="40" step="0.5" value="25" class="w-full amber-slider" oninput="updateAllPhysics()">
+          </div>
+
+          <!-- ปุ่มเปิด/ปิดเสียงจำลอง -->
+          <button id="btn-play-tone" onclick="toggleAudioTone()" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 hover:brightness-110 shadow-[0_0_20px_rgba(245,158,11,0.35)]">
+            <span id="tone-icon" class="text-lg">🔊</span>
+            <span id="tone-label">เปิดเสียงจำลอง (ฟังเสียงดัง–เบา)</span>
+            <div id="tone-eq" class="hidden items-end gap-0.5 h-4">
+              <span class="w-1 bg-slate-950 rounded-full eq-bar"></span>
+              <span class="w-1 bg-slate-950 rounded-full eq-bar"></span>
+              <span class="w-1 bg-slate-950 rounded-full eq-bar"></span>
+              <span class="w-1 bg-slate-950 rounded-full eq-bar"></span>
+            </div>
+          </button>
+          <p class="text-[11px] text-slate-400 text-center">
+            ควบคุมระดับความดังอัตโนมัติให้ปลอดภัยและสบายหู (เปิดเสียงแล้วลองเลื่อนระยะ L เพื่อฟังจังหวะสั่นพ้อง)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== แผงช่วยเรียนรู้ตามกระบวนการ H&H+STEM (3 แท็บ) ==================== -->
+    <section class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <!-- หัวแท็บ -->
+      <div class="flex overflow-x-auto no-scrollbar border-b border-slate-800 bg-slate-950/60">
+        <button id="tab-btn-1" onclick="setActiveTab(1)" class="flex-1 min-w-[200px] px-4 py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-cyan-400 text-cyan-300 bg-cyan-500/10 transition flex items-center justify-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center shrink-0">1</span>
+          <span>Phase 1: สำรวจ (Focus & Describe)</span>
+        </button>
+        <button id="tab-btn-2" onclick="setActiveTab(2)" class="flex-1 min-w-[210px] px-4 py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition flex items-center justify-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center shrink-0">2</span>
+          <span>Phase 2: วางแผนคำนวณ (H&H: Plan)</span>
+        </button>
+        <button id="tab-btn-3" onclick="setActiveTab(3)" class="flex-1 min-w-[230px] px-4 py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition flex items-center justify-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center shrink-0">3</span>
+          <span>Phase 3–4: ทดสอบและประเมิน (Execute & Evaluate)</span>
+        </button>
+      </div>
+
+      <!-- แท็บ 1: Phase 1 (Focus & Describe) -->
+      <div id="tab-content-1" class="p-4 sm:p-6 space-y-4">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700">
+            <p class="text-xs text-slate-400">อัตราเร็วเสียง (v)</p>
+            <p class="text-xl sm:text-2xl font-bold text-amber-400 mt-1"><span id="p1-v">346.0</span> <span class="text-xs font-normal text-slate-300">m/s</span></p>
+            <p id="p1-t-sub" class="text-[11px] text-slate-400 mt-1">ที่อุณหภูมิ 25.0 °C</p>
+          </div>
+          <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700">
+            <p class="text-xs text-slate-400">ความถี่เสียง (f)</p>
+            <p class="text-xl sm:text-2xl font-bold text-cyan-400 mt-1"><span id="p1-f">680.0</span> <span class="text-xs font-normal text-slate-300">Hz</span></p>
+            <p id="p1-f-sub" class="text-[11px] text-slate-400 mt-1">แหล่งกำเนิดเสียงคงที่</p>
+          </div>
+          <div class="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700">
+            <p class="text-xs text-slate-400">ความยาวคลื่น (λ)</p>
+            <p class="text-xl sm:text-2xl font-bold text-white mt-1"><span id="p1-lambda">50.9</span> <span class="text-xs font-normal text-slate-300">cm</span></p>
+            <p id="p1-lambda-sub" class="text-[11px] text-cyan-300 mt-1">ระยะห่างจุดดังติดกัน λ/2 = 25.4 cm</p>
+          </div>
+          <div class="bg-slate-800/80 rounded-xl p-3.5 border border-emerald-500/30">
+            <p class="text-xs text-slate-400">ความยาวลำอากาศ (L)</p>
+            <p class="text-xl sm:text-2xl font-bold text-emerald-400 mt-1"><span id="p1-L">12.7</span> <span class="text-xs font-normal text-slate-300">cm</span></p>
+            <p id="p1-L-sub" class="text-[11px] text-emerald-300 mt-1">อัตราส่วน L/λ = 0.25</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/70 rounded-xl p-4 border border-slate-800">
+          <h3 class="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
+            <span>🔍</span> คำถามกระตุ้นคิดตามกลยุทธ์ H&H (Focus & Describe)
+          </h3>
+          <ul id="p1-questions" class="space-y-2 text-xs sm:text-sm text-slate-200 list-disc list-inside leading-relaxed"></ul>
+        </div>
+      </div>
+
+      <!-- แท็บ 2: Phase 2 (Plan — วางแผนคำนวณก่อนทดลองจริง) -->
+      <div id="tab-content-2" class="hidden p-4 sm:p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- ซ้าย: ขั้นตอนคำนวณทีละบรรทัด -->
+          <div class="bg-slate-950/70 rounded-xl p-4 sm:p-5 border border-slate-800 space-y-3">
+            <h3 class="text-sm font-bold text-cyan-400 flex items-center gap-2">
+              <span>📐</span> ขั้นตอนวางแผนคำนวณ (H&H: Plan)
+            </h3>
+            <div class="space-y-2.5 text-xs sm:text-sm font-mono">
+              <div class="bg-slate-800/80 p-3 rounded-lg border-l-4 border-amber-400">
+                <p class="text-slate-400 font-sans text-xs mb-1">ขั้นที่ 1: คำนวณอัตราเร็วเสียงในอากาศ (v)</p>
+                <p class="text-white">v = 331 + 0.6t</p>
+                <p id="p2-step1" class="text-amber-300 font-semibold">v = 331 + 0.6(25.0) = 346.0 m/s</p>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-lg border-l-4 border-cyan-400">
+                <p id="p2-step2-title" class="text-slate-400 font-sans text-xs mb-1">ขั้นที่ 2: หาความยาวคลื่นเสียง (λ)</p>
+                <p id="p2-step2-formula" class="text-white">λ = v / f</p>
+                <p id="p2-step2-calc" class="text-cyan-300 font-semibold">λ = 346.0 / 680 = 0.509 m = 50.9 cm</p>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-lg border-l-4 border-emerald-400">
+                <p id="p2-step3-title" class="text-slate-400 font-sans text-xs mb-1">ขั้นที่ 3: คาดการณ์ระยะเกิดเสียงดังที่สุด (สั่นพ้อง)</p>
+                <p id="p2-step3-calc" class="text-emerald-300 font-semibold leading-relaxed"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ขวา: การ์ดเตรียมความยาวท่อ PVC และระดับน้ำก่อนทดลองจริง -->
+          <div class="bg-slate-950/70 rounded-xl p-4 sm:p-5 border border-emerald-500/30 flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+              <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                <span>🛠️</span> แผนเตรียมท่อ PVC และระดับน้ำ (คลิกเพื่อทดสอบตำแหน่งบนจอ)
+              </h3>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                ใช้ตัวเลขด้านล่างเพื่อวางแผนในใบงาน <strong class="text-white">Plan & Design Worksheet</strong> ว่าต้องเตรียมท่อ PVC ยาวอย่างน้อยกี่เซนติเมตร จึงจะเลื่อนหาเสียงดังได้ครบ 2–3 ครั้ง
+              </p>
+
+              <div class="grid grid-cols-3 gap-2.5">
+                <button onclick="jumpToPredictedPeak(1)" class="p-3 rounded-xl bg-slate-800 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-400 transition text-center">
+                  <p class="text-[11px] text-slate-400">สั่นพ้องครั้งที่ 1</p>
+                  <p class="text-xs text-cyan-300 font-mono">L₁ = λ/4</p>
+                  <p id="pred-L1" class="text-base sm:text-lg font-bold text-emerald-400 mt-1">12.7 cm</p>
+                </button>
+                <button onclick="jumpToPredictedPeak(2)" class="p-3 rounded-xl bg-slate-800 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-400 transition text-center">
+                  <p class="text-[11px] text-slate-400">สั่นพ้องครั้งที่ 2</p>
+                  <p class="text-xs text-cyan-300 font-mono">L₂ = 3λ/4</p>
+                  <p id="pred-L2" class="text-base sm:text-lg font-bold text-emerald-400 mt-1">38.2 cm</p>
+                </button>
+                <button onclick="jumpToPredictedPeak(3)" class="p-3 rounded-xl bg-slate-800 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-400 transition text-center">
+                  <p class="text-[11px] text-slate-400">สั่นพ้องครั้งที่ 3</p>
+                  <p class="text-xs text-cyan-300 font-mono">L₃ = 5λ/4</p>
+                  <p id="pred-L3" class="text-base sm:text-lg font-bold text-emerald-400 mt-1">63.6 cm</p>
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-slate-800/70 rounded-xl p-3 border border-slate-700 text-xs text-slate-200 leading-relaxed">
+              <strong class="text-amber-300">💡 คำแนะนำสำหรับท่อ PVC จริง:</strong>
+              <span id="p2-pipe-advice">ควรเตรียมท่อ PVC ยาวอย่างน้อย 50 cm และขวดน้ำอัดลม 1.5 ลิตรใส่น้ำ เพื่อเลื่อนหาจุด L₁ และ L₂ ได้ครบถ้วน</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- แท็บ 3: Phase 3-4 (Execute & Evaluate) -->
+      <div id="tab-content-3" class="hidden p-4 sm:p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- ซ้าย: กรอกค่าจริงจากท่อ PVC ของกลุ่ม -->
+          <div class="bg-slate-950/70 rounded-xl p-4 sm:p-5 border border-slate-800 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-cyan-400 flex items-center gap-2">
+                <span>📊</span> บันทึกผลการทดลองจริงจากท่อ PVC ของกลุ่ม
+              </h3>
+              <button onclick="importFromRecordedPeaks()" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 transition">
+                ดึงค่าจากตารางโหมด A
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="input-real-L1" class="block text-xs text-slate-300 mb-1">ระยะเสียงดังครั้งที่ 1 (L₁ จริง) cm</label>
+                <input id="input-real-L1" type="number" step="0.1" min="1" max="150" placeholder="เช่น 11.8" oninput="updateRealEvaluation()"
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 focus:border-cyan-400 text-white font-bold text-base focus:outline-none">
+              </div>
+              <div>
+                <label for="input-real-L2" class="block text-xs text-slate-300 mb-1">ระยะเสียงดังครั้งที่ 2 (L₂ จริง) cm</label>
+                <input id="input-real-L2" type="number" step="0.1" min="1" max="150" placeholder="เช่น 37.2" oninput="updateRealEvaluation()"
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 focus:border-cyan-400 text-white font-bold text-base focus:outline-none">
+              </div>
+            </div>
+
+            <!-- ผลคำนวณ v จริง และ % Error -->
+            <div id="real-eval-box" class="bg-slate-900 rounded-xl p-4 border border-slate-700 space-y-2 text-xs sm:text-sm">
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">ผลต่างระยะ (ΔL = L₂ − L₁):</span>
+                <span id="eval-delta-L" class="font-bold text-white">-- cm</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">ความยาวคลื่นทดลอง (λ = 2ΔL):</span>
+                <span id="eval-lambda-exp" class="font-bold text-cyan-300">-- cm</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-400">อัตราเร็วเสียงจริง (v = f·λ):</span>
+                <span id="eval-v-exp" class="font-bold text-emerald-400">-- m/s</span>
+              </div>
+              <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                <span class="text-slate-300 font-semibold">ร้อยละความคลาดเคลื่อน (% Error):</span>
+                <span id="eval-err-pct" class="text-base font-bold text-slate-400">-- %</span>
+              </div>
+            </div>
+
+            <!-- คำอธิบาย End Correction -->
+            <div class="bg-amber-500/10 rounded-xl p-3.5 border border-amber-500/30 text-xs text-amber-100/90 leading-relaxed">
+              <strong class="text-amber-300">🔬 ทำไม L₁ ที่วัดได้จริงมักสั้นกว่า λ/4 เล็กน้อย? (End Correction)</strong><br>
+              ในท่อ PVC จริง ตำแหน่งปฏิบัพ (A) ไม่ได้อยู่ที่ขอบปากท่อพอดี แต่จะเลยปากท่อออกไปประมาณ <span class="font-mono text-amber-300">e ≈ 0.6r</span> (เมื่อ r คือรัศมีภายในท่อ) ดังนั้นการใช้ผลต่าง <span class="font-mono text-emerald-300">ΔL = L₂ − L₁ = λ/2</span> จะช่วยหักล้างค่าระยะแก้ปลายท่อออกไป ทำให้คำนวณอัตราเร็วเสียงได้แม่นยำขึ้นมาก!
+            </div>
+          </div>
+
+          <!-- ขวา: กรอบสะท้อนคิด One Success + One Challenge + One Learning -->
+          <div class="bg-slate-950/70 rounded-xl p-4 sm:p-5 border border-amber-500/30 flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                  <span>💡</span> สรุปการเรียนรู้ของกลุ่ม (Group Reflection)
+                </h3>
+                <span class="text-[11px] text-slate-400">H&H: Evaluate</span>
+              </div>
+
+              <div>
+                <label for="ref-success" class="block text-xs font-semibold text-emerald-400 mb-1">1. One Success (สิ่งที่กลุ่มทำได้ดีที่สุด 1 อย่าง)</label>
+                <input id="ref-success" type="text" placeholder="เช่น เลื่อนท่อ PVC จุ่มน้ำจนจับจังหวะเสียงดัง L₁ และ L₂ ได้ชัดเจน"
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 focus:border-emerald-400 text-xs sm:text-sm text-white focus:outline-none">
+              </div>
+              <div>
+                <label for="ref-challenge" class="block text-xs font-semibold text-rose-400 mb-1">2. One Challenge (ความท้าทาย/ปัญหาที่พบ 1 อย่าง)</label>
+                <input id="ref-challenge" type="text" placeholder="เช่น เสียงรบกวนรอบห้องทำให้ฟังจุดเสียงดังครั้งที่ 2 ยากขึ้น"
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 focus:border-rose-400 text-xs sm:text-sm text-white focus:outline-none">
+              </div>
+              <div>
+                <label for="ref-learning" class="block text-xs font-semibold text-cyan-400 mb-1">3. One Learning (สิ่งที่เรียนรู้ใหม่ 1 อย่าง)</label>
+                <input id="ref-learning" type="text" placeholder="เช่น ผิวน้ำเป็นจุดบัพ (N) และระยะห่างระหว่างเสียงดังติดกันคือ λ/2"
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 focus:border-cyan-400 text-xs sm:text-sm text-white focus:outline-none">
+              </div>
+            </div>
+
+            <button onclick="copyReflectionSummary()" class="w-full py-3 px-4 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/60 text-amber-300 text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2">
+              <span>📋</span> คัดลอกผลทดสอบและสรุปการเรียนรู้ส่งครู (1 คลิก)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center text-[11px] text-slate-500 pb-4">
+      Sound Wave X-Ray AR v2 • สื่อการเรียนรู้ WebAR ประกอบนวัตกรรม H&H+STEM รายวิชาฟิสิกส์ ม.5
+    </footer>
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. สถานะหลักของระบบ (Application State)
+    // =========================================================================
+    const state = {
+      learningMode: 'resonance',  // 'resonance' (โหมด A) | 'explorer' (โหมด B)
+      viewMode: 'lab',            // 'lab' | 'ar'
+      orientation: 'vertical',    // 'vertical' (ท่อจุ่มน้ำ) | 'horizontal' (ลูกสูบ/หลอด)
+
+      // ตัวแปรร่วม
+      tempC: 25.0,                // 15 - 40 °C
+      speed: 346.0,               // v = 331 + 0.6t (m/s)
+
+      // ตัวแปรโหมด A: หลอดเรโซแนนซ์
+      resStyle: 'water',          // 'water' | 'piston'
+      resFreq: 680,               // 300 - 1200 Hz
+      resLengthCm: 12.7,          // 5.0 - 100.0 cm
+      resLambdaCm: 50.88,         // (v / f) * 100
+      resStrength: 1.0,           // 0.0 (เบาสุด) ถึง 1.0 (ดังสุด/สั่นพ้อง)
+      resDb: 84.0,                // ระดับความดังจำลอง (dB)
+      resOrder: 1,                // ลำดับการสั่นพ้องใกล้เคียง (1, 2, 3...)
+      recordedPeaks: [],          // ค่า L ที่บันทึกไว้ (สูงสุด 3 ค่า)
+
+      // ตัวแปรโหมด B: สำรวจท่อปลายเปิด-ปิด
+      expPipeType: 'open',        // 'open' | 'closed'
+      expLengthCm: 35,            // 10 - 100 cm
+      expHarmonic: 1,             // open: 1,2,3,4 | closed: 1,3,5,7
+      expFreq: 494.3,
+      expLambdaCm: 70.0,
+
+      // ชั้นข้อมูล Canvas
+      showWave: true,
+      showParticles: true,
+      showLabels: true,
+      isAnimating: true,
+
+      // ค่า AR Overlay
+      arScale: 1.0,
+      arPipeOpacity: 0.50,
+      facingMode: 'environment',
+      mediaStream: null,
+
+      // Web Audio API
+      isPlayingAudio: false,
+      audioCtx: null,
+      oscillator: null,
+      gainNode: null,
+
+      // แอนิเมชัน
+      phase: 0,
+      lastTime: 0
+    };
+
+    // สร้างอนุภาคอากาศกระจายตัวสม่ำเสมอตามแกนท่อ (u: 0..1 จากปากท่อไปปลายท่อ, v: -1..1 แนวขวาง)
+    const PARTICLES = [];
+    const P_COLS = 28;
+    const P_ROWS = 6;
+    for (let r = 0; r < P_ROWS; r++) {
+      for (let c = 0; c < P_COLS; c++) {
+        PARTICLES.push({
+          u: Math.max(0.02, Math.min(0.98, (c + 0.5 + (Math.random() - 0.5) * 0.45) / P_COLS)),
+          v: (((r + 0.5) / P_ROWS) * 2 - 1) * 0.76 + (Math.random() - 0.5) * 0.08,
+          size: 2.0 + Math.random() * 1.3
+        });
+      }
+    }
+
+    const canvas = document.getElementById('sim-canvas');
+    const ctx = canvas.getContext('2d');
+    const viewportEl = document.getElementById('viewport-container');
+
+    // =========================================================================
+    // 2. Toast Notification (ไม่ใช้ alert)
+    // =========================================================================
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const styles = {
+        info: 'bg-slate-900/95 border-cyan-400/60 text-cyan-300',
+        success: 'bg-slate-900/95 border-emerald-400/60 text-emerald-300',
+        warn: 'bg-slate-900/95 border-amber-400/60 text-amber-300'
+      };
+      el.className = `pointer-events-auto px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-medium shadow-xl backdrop-blur transition-all duration-300 ${styles[type] || styles.info}`;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-8px)';
+        setTimeout(() => el.remove(), 280);
+      }, 3000);
+    }
+
+    // =========================================================================
+    // 3. ฟังก์ชันคำนวณโน้ตดนตรี & ฟิสิกส์ทั้ง 2 โหมด
+    // =========================================================================
+    const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    function getNearestNote(freq) {
+      if (!freq || freq <= 0) return { name: '-', stdFreq: 0 };
+      const midi = Math.round(69 + 12 * Math.log2(freq / 440));
+      const noteIdx = ((midi % 12) + 12) % 12;
+      const octave = Math.floor(midi / 12) - 1;
+      const stdFreq = 440 * Math.pow(2, (midi - 69) / 12);
+      return { name: `${NOTE_NAMES[noteIdx]}${octave}`, stdFreq };
+    }
+
+    function updateAllPhysics() {
+      state.tempC = parseFloat(document.getElementById('input-temp').value);
+      state.speed = 331 + 0.6 * state.tempC;
+
+      document.getElementById('val-temp').textContent = state.tempC.toFixed(1);
+      document.getElementById('val-speed-mini').textContent = state.speed.toFixed(1);
+
+      updateResonancePhysics();
+      updateExplorerPhysics();
+      updateRealEvaluation();
+    }
+
+    // คำนวณฟิสิกส์ โหมด A: หลอดเรโซแนนซ์
+    function updateResonancePhysics() {
+      state.resFreq = parseFloat(document.getElementById('input-res-freq').value);
+      state.resLengthCm = parseFloat(document.getElementById('input-res-L').value);
+      state.resLambdaCm = (state.speed / state.resFreq) * 100;
+
+      // เฟสของคลื่นนิ่งที่ปากท่อเมื่อกำหนดให้ผิวน้ำ/ลูกสูบเป็นจุดบัพ (N)
+      // สั่นพ้อง (เสียงดังสุด) เมื่อ 2*pi*L/lambda = (2k-1)*pi/2 => cos(phi) = 0
+      // หักล้าง (เสียงเบาสุด) เมื่อ 2*pi*L/lambda = k*pi => |cos(phi)| = 1
+      const phi = (2 * Math.PI * state.resLengthCm) / state.resLambdaCm;
+      const cosPhi = Math.cos(phi);
+      // ฟังก์ชัน Lorentzian-like ให้ยอดสั่นพ้องคมชัดแต่เลื่อนหาได้สนุกและสมจริง
+      state.resStrength = 1 / (1 + 22 * cosPhi * cosPhi);
+      state.resDb = 36 + 49 * state.resStrength; // 36 dB (เบาสุด) ถึง 85 dB (ดังสุด)
+
+      // หาลำดับสั่นพ้องที่ใกล้ที่สุด k = 1, 2, 3, ...
+      const approxK = Math.round((2 * state.resLengthCm) / state.resLambdaCm + 0.5);
+      state.resOrder = Math.max(1, approxK);
+
+      // อัปเดต UI โหมด A
+      document.getElementById('val-res-freq').textContent = state.resFreq.toFixed(0);
+      document.getElementById('val-res-L').textContent = state.resLengthCm.toFixed(1);
+      document.getElementById('val-db-text').textContent = `${state.resDb.toFixed(1)} dB`;
+
+      const pct = Math.max(4, Math.min(100, state.resStrength * 100));
+      const meterBar = document.getElementById('db-meter-bar');
+      meterBar.style.width = `${pct.toFixed(1)}%`;
+
+      let statusText = 'เลื่อนหาจุดเสียงดัง...';
+      let statusClass = 'border-amber-400/50 text-amber-300';
+      let meterTextClass = 'text-amber-300';
+
+      if (state.resStrength >= 0.86) {
+        statusText = `🔊 เสียงดังที่สุด! สั่นพ้องครั้งที่ ${state.resOrder} (L${toSubscript(state.resOrder)})`;
+        statusClass = 'border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
+        meterTextClass = 'text-emerald-400';
+      } else if (state.resStrength <= 0.14) {
+        statusText = '🔇 เสียงเบาที่สุด (หักล้าง)';
+        statusClass = 'border-rose-400/60 text-rose-300';
+        meterTextClass = 'text-rose-400';
+      }
+
+      document.getElementById('meter-status-text').textContent = statusText;
+      document.getElementById('meter-status-text').className = `font-semibold ${meterTextClass}`;
+
+      if (state.learningMode === 'resonance') {
+        document.getElementById('hud-primary-badge').textContent =
+          `หลอดเรโซแนนซ์ (${state.resStyle === 'water' ? 'จุ่มน้ำ' : 'ลูกสูบ'}) • f = ${state.resFreq} Hz`;
+        const hudStatus = document.getElementById('hud-status-badge');
+        hudStatus.textContent = statusText;
+        hudStatus.className = `px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-950/85 backdrop-blur border transition-all ${statusClass}`;
+
+        syncAudioOutput();
+        renderHHTabs();
+      }
+      renderRecordedCalculations();
+    }
+
+    // คำนวณฟิสิกส์ โหมด B: สำรวจท่อปลายเปิด-ปิด
+    function updateExplorerPhysics() {
+      state.expLengthCm = parseFloat(document.getElementById('input-exp-L').value);
+      const Lm = state.expLengthCm / 100;
+
+      if (state.expPipeType === 'open') {
+        state.expFreq = (state.expHarmonic * state.speed) / (2 * Lm);
+        state.expLambdaCm = (2 * state.expLengthCm) / state.expHarmonic;
+      } else {
+        state.expFreq = (state.expHarmonic * state.speed) / (4 * Lm);
+        state.expLambdaCm = (4 * state.expLengthCm) / state.expHarmonic;
+      }
+
+      const noteInfo = getNearestNote(state.expFreq);
+      document.getElementById('val-exp-L').textContent = state.expLengthCm.toFixed(0);
+      document.getElementById('exp-freq-display').textContent = state.expFreq.toFixed(1);
+      document.getElementById('exp-note-display').textContent = noteInfo.name;
+
+      if (state.learningMode === 'explorer') {
+        const pipeLabel = state.expPipeType === 'open' ? 'ท่อปลายเปิด' : 'ท่อปลายปิด';
+        document.getElementById('hud-primary-badge').textContent = `${pipeLabel} • n = ${state.expHarmonic} • L = ${state.expLengthCm} cm`;
+        const hudStatus = document.getElementById('hud-status-badge');
+        hudStatus.textContent = `🎵 ${state.expFreq.toFixed(1)} Hz (${noteInfo.name})`;
+        hudStatus.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-950/85 backdrop-blur border border-cyan-400/60 text-cyan-300';
+
+        syncAudioOutput();
+        renderHHTabs();
+      }
+    }
+
+    function toSubscript(num) {
+      const map = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+      return String(num).split('').map(c => map[c] || c).join('');
+    }
+
+    // =========================================================================
+    // 4. การสลับโหมดการเรียนรู้ (A / B), มุมมอง (Lab / AR), แนวท่อ
+    // =========================================================================
+    function setLearningMode(mode) {
+      state.learningMode = mode;
+      const btnA = document.getElementById('btn-learn-a');
+      const btnB = document.getElementById('btn-learn-b');
+      const ctrlA = document.getElementById('controls-mode-a');
+      const ctrlB = document.getElementById('controls-mode-b');
+      const logPanel = document.getElementById('resonance-log-panel');
+
+      if (mode === 'resonance') {
+        btnA.className = 'flex-1 py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-emerald-500/20 text-emerald-300 border border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.2)]';
+        btnB.className = 'flex-1 py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-slate-800/70 text-slate-300 border border-slate-700 hover:border-slate-500';
+        ctrlA.classList.remove('hidden');
+        ctrlB.classList.add('hidden');
+        logPanel.classList.remove('hidden');
+        setOrientation(state.resStyle === 'water' ? 'vertical' : 'horizontal');
+        updateResonancePhysics();
+      } else {
+        btnB.className = 'flex-1 py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-cyan-500/20 text-cyan-300 border border-cyan-400/60 shadow-[0_0_12px_rgba(34,211,238,0.2)]';
+        btnA.className = 'flex-1 py-2.5 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-slate-800/70 text-slate-300 border border-slate-700 hover:border-slate-500';
+        ctrlB.classList.remove('hidden');
+        ctrlA.classList.add('hidden');
+        logPanel.classList.add('hidden');
+        setOrientation('horizontal');
+        updateExplorerPhysics();
+      }
+      updateAudioButtonLabel();
+    }
+
+    function setResonanceStyle(style) {
+      state.resStyle = style;
+      const btnW = document.getElementById('btn-style-water');
+      const btnP = document.getElementById('btn-style-piston');
+      if (style === 'water') {
+        btnW.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.18)]';
+        btnP.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500';
+        setOrientation('vertical');
+      } else {
+        btnP.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.18)]';
+        btnW.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500';
+        setOrientation('horizontal');
+      }
+      updateResonancePhysics();
+    }
+
+    function setResFreqPreset(f) {
+      document.getElementById('input-res-freq').value = f;
+      updateResonancePhysics();
+      showToast(`ตั้งความถี่แหล่งกำเนิดเสียงเป็น ${f} Hz`, 'info');
+    }
+
+    function nudgeResLength(delta) {
+      const slider = document.getElementById('input-res-L');
+      const next = Math.max(5.0, Math.min(100.0, Math.round((parseFloat(slider.value) + delta) * 10) / 10));
+      slider.value = next.toFixed(1);
+      updateResonancePhysics();
+    }
+
+    function setExplorerPipeType(type) {
+      state.expPipeType = type;
+      const btnO = document.getElementById('btn-exp-open');
+      const btnC = document.getElementById('btn-exp-closed');
+      if (type === 'open') {
+        btnO.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-cyan-500/20 border-cyan-400 text-cyan-300';
+        btnC.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500';
+        if (![1, 2, 3, 4].includes(state.expHarmonic)) state.expHarmonic = 1;
+        document.getElementById('exp-harmonic-hint').textContent = 'ท่อปลายเปิด: n = 1, 2, 3, 4';
+      } else {
+        btnC.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-amber-500/20 border-amber-400 text-amber-300';
+        btnO.className = 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500';
+        if (![1, 3, 5, 7].includes(state.expHarmonic)) state.expHarmonic = 1;
+        document.getElementById('exp-harmonic-hint').textContent = 'ท่อปลายปิด (เลขคี่): n = 1, 3, 5, 7';
+      }
+      renderExplorerHarmonics();
+      updateExplorerPhysics();
+    }
+
+    function renderExplorerHarmonics() {
+      const container = document.getElementById('exp-harmonic-buttons');
+      const list = state.expPipeType === 'open' ? [1, 2, 3, 4] : [1, 3, 5, 7];
+      container.innerHTML = '';
+      list.forEach(n => {
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          state.expHarmonic = n;
+          renderExplorerHarmonics();
+          updateExplorerPhysics();
+        };
+        btn.className = state.expHarmonic === n
+          ? 'py-2 rounded-xl text-xs sm:text-sm font-bold bg-cyan-400 text-slate-950 shadow-[0_0_10px_rgba(34,211,238,0.4)] transition'
+          : 'py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:border-cyan-400/50 transition';
+        btn.textContent = `n = ${n}`;
+        container.appendChild(btn);
+      });
+    }
+
+    function setExpLengthPreset(cm) {
+      document.getElementById('input-exp-L').value = cm;
+      updateExplorerPhysics();
+      showToast(`ตั้งความยาวท่อเป็น ${cm} cm`, 'info');
+    }
+
+    function toggleOrientation() {
+      setOrientation(state.orientation === 'vertical' ? 'horizontal' : 'vertical');
+    }
+
+    function setOrientation(orient) {
+      state.orientation = orient;
+      document.getElementById('orient-label').textContent = orient === 'vertical' ? '↕ แนวตั้ง' : '↔ แนวนอน';
+      const btnV = document.getElementById('btn-ar-vert');
+      const btnH = document.getElementById('btn-ar-horiz');
+      if (btnV && btnH) {
+        if (orient === 'vertical') {
+          btnV.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50';
+          btnH.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700';
+        } else {
+          btnH.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50';
+          btnV.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700';
+        }
+      }
+    }
+
+    // =========================================================================
+    // 5. ตารางบันทึกจุดเสียงดัง L1, L2, L3 (โหมด A)
+    // =========================================================================
+    function recordResonancePeak() {
+      if (state.recordedPeaks.length >= 3) {
+        showToast('บันทึกครบ 3 จุดแล้ว กด "ล้างข้อมูล" เพื่อเริ่มบันทึกชุดใหม่ครับ', 'warn');
+        return;
+      }
+      const val = Number(state.resLengthCm.toFixed(1));
+      state.recordedPeaks.push(val);
+      state.recordedPeaks.sort((a, b) => a - b);
+
+      const idx = state.recordedPeaks.length;
+      if (state.resStrength >= 0.82) {
+        showToast(`บันทึกจุดเสียงดัง L${toSubscript(idx)} = ${val.toFixed(1)} cm สำเร็จ!`, 'success');
+      } else {
+        showToast(`บันทึก L${toSubscript(idx)} = ${val.toFixed(1)} cm แล้ว (หมายเหตุ: จุดนี้ยังไม่ใช่ยอดเสียงดังสุด)`, 'warn');
+      }
+      renderRecordedCalculations();
+    }
+
+    function clearRecordedPeaks() {
+      state.recordedPeaks = [];
+      renderRecordedCalculations();
+      showToast('ล้างข้อมูลตารางบันทึกแล้ว', 'info');
+    }
+
+    function renderRecordedCalculations() {
+      const peaks = state.recordedPeaks;
+      const nextNum = Math.min(3, peaks.length + 1);
+      document.getElementById('btn-record-label').textContent =
+        peaks.length >= 3 ? 'ครบ 3 จุดแล้ว' : `บันทึกจุด L${toSubscript(nextNum)}`;
+
+      [0, 1, 2].forEach(i => {
+        const el = document.getElementById(`rec-L${i + 1}`);
+        if (peaks[i] !== undefined) {
+          el.textContent = `${peaks[i].toFixed(1)} cm`;
+          el.className = 'text-base font-bold text-emerald-400 mt-0.5';
+        } else {
+          el.textContent = '-- cm';
+          el.className = 'text-base font-bold text-slate-500 mt-0.5';
+        }
+      });
+
+      const box = document.getElementById('recorded-calc-box');
+      if (peaks.length < 2) {
+        box.innerHTML = `<p class="text-slate-400 text-center">บันทึกตำแหน่งเสียงดังอย่างน้อย 2 จุด (L₁ และ L₂) เพื่อคำนวณ ΔL, λ และ v อัตโนมัติ</p>`;
+        return;
+      }
+
+      // คำนวณค่าเฉลี่ย ΔL จากจุดที่บันทึกติดกัน
+      let deltaSum = 0;
+      for (let i = 1; i < peaks.length; i++) {
+        deltaSum += (peaks[i] - peaks[i - 1]);
+      }
+      const avgDeltaCm = deltaSum / (peaks.length - 1);
+      const lambdaExpCm = 2 * avgDeltaCm;
+      const vExp = state.resFreq * (lambdaExpCm / 100);
+      const errPct = (Math.abs(vExp - state.speed) / state.speed) * 100;
+      const errColor = errPct <= 5 ? 'text-emerald-400' : (errPct <= 12 ? 'text-amber-400' : 'text-rose-400');
+
+      box.innerHTML = `
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+          <div class="bg-slate-900 rounded-lg p-2 border border-slate-800">
+            <p class="text-[10px] text-slate-400">ΔL = λ/2</p>
+            <p class="font-bold text-white">${avgDeltaCm.toFixed(1)} cm</p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-2 border border-slate-800">
+            <p class="text-[10px] text-slate-400">λ ทดลอง (2ΔL)</p>
+            <p class="font-bold text-cyan-300">${lambdaExpCm.toFixed(1)} cm</p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-2 border border-slate-800">
+            <p class="text-[10px] text-slate-400">v ทดลอง (f·λ)</p>
+            <p class="font-bold text-emerald-400">${vExp.toFixed(1)} m/s</p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-2 border border-slate-800">
+            <p class="text-[10px] text-slate-400">% Error (เทียบ ${state.speed.toFixed(0)})</p>
+            <p class="font-bold ${errColor}">${errPct.toFixed(2)} %</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 6. แผงช่วยเรียนรู้ H&H+STEM (Phase 1, Phase 2, Phase 3-4)
+    // =========================================================================
+    function renderHHTabs() {
+      const v = state.speed;
+      const t = state.tempC;
+
+      if (state.learningMode === 'resonance') {
+        const f = state.resFreq;
+        const lam = state.resLambdaCm;
+        const L = state.resLengthCm;
+        const L1 = lam / 4;
+        const L2 = (3 * lam) / 4;
+        const L3 = (5 * lam) / 4;
+
+        // Phase 1
+        document.getElementById('p1-v').textContent = v.toFixed(1);
+        document.getElementById('p1-t-sub').textContent = `ที่อุณหภูมิ ${t.toFixed(1)} °C`;
+        document.getElementById('p1-f').textContent = f.toFixed(0);
+        document.getElementById('p1-f-sub').textContent = 'ความถี่แหล่งกำเนิดคงที่ (โหมด A)';
+        document.getElementById('p1-lambda').textContent = lam.toFixed(1);
+        document.getElementById('p1-lambda-sub').textContent = `ระยะห่างจุดดังติดกัน λ/2 = ${(lam / 2).toFixed(1)} cm`;
+        document.getElementById('p1-L').textContent = L.toFixed(1);
+        document.getElementById('p1-L-sub').textContent = `อัตราส่วน L/λ = ${(L / lam).toFixed(2)}`;
+
+        document.getElementById('p1-questions').innerHTML = `
+          <li>สังเกตที่<strong>ผิวน้ำ / หน้าลูกสูบ</strong> อนุภาคอากาศเคลื่อนที่ได้หรือไม่? ตำแหน่งนั้นคือ <strong>บัพ (Node: N)</strong> หรือ <strong>ปฏิบัพ (Antinode: A)</strong>?</li>
+          <li>เมื่อเลื่อนระยะลำอากาศ L จากจุดเสียงดังครั้งที่ 1 (L₁) ไปยังครั้งที่ 2 (L₂) ระยะห่าง <strong>ΔL = L₂ − L₁</strong> สัมพันธ์กับความยาวคลื่น (λ) อย่างไร?</li>
+          <li>หากเปลี่ยนความถี่แหล่งกำเนิดเสียงให้<strong>สูงขึ้น</strong> (เช่น จาก 512 Hz เป็น 850 Hz) ระยะห่างระหว่างจุดเสียงดังแต่ละครั้งจะเพิ่มขึ้นหรือลดลง? เพราะเหตุใด?</li>
+        `;
+
+        // Phase 2
+        document.getElementById('p2-step1').textContent = `v = 331 + 0.6(${t.toFixed(1)}) = ${v.toFixed(1)} m/s`;
+        document.getElementById('p2-step2-title').textContent = 'ขั้นที่ 2: หาความยาวคลื่นเสียง (λ = v / f)';
+        document.getElementById('p2-step2-formula').textContent = 'λ = v / f';
+        document.getElementById('p2-step2-calc').textContent = `λ = ${v.toFixed(1)} / ${f} = ${(lam / 100).toFixed(3)} m = ${lam.toFixed(1)} cm`;
+        document.getElementById('p2-step3-title').textContent = 'ขั้นที่ 3: ตำแหน่งเกิดเสียงดังที่สุด (ท่อปลายปิด L = (2n-1)λ/4)';
+        document.getElementById('p2-step3-calc').innerHTML =
+          `L₁ = λ/4 = ${L1.toFixed(1)} cm<br>L₂ = 3λ/4 = ${L2.toFixed(1)} cm<br>L₃ = 5λ/4 = ${L3.toFixed(1)} cm`;
+
+        document.getElementById('pred-L1').textContent = `${L1.toFixed(1)} cm`;
+        document.getElementById('pred-L2').textContent = `${L2.toFixed(1)} cm`;
+        document.getElementById('pred-L3').textContent = `${L3.toFixed(1)} cm`;
+
+        const minPipeNeeded = Math.ceil((L2 + 12) / 5) * 5;
+        document.getElementById('p2-pipe-advice').textContent =
+          `สำหรับความถี่ ${f} Hz ควรเตรียมท่อ PVC ยาวอย่างน้อย ${minPipeNeeded} cm เพื่อให้เลื่อนหาเสียงดังได้ครบทั้ง L₁ (${L1.toFixed(1)} cm) และ L₂ (${L2.toFixed(1)} cm) ได้อย่างสะดวก`;
+      } else {
+        // โหมด B
+        const f = state.expFreq;
+        const lam = state.expLambdaCm;
+        const L = state.expLengthCm;
+        const n = state.expHarmonic;
+        const isOpen = state.expPipeType === 'open';
+        const denom = isOpen ? 2 : 4;
+        const note = getNearestNote(f);
+
+        document.getElementById('p1-v').textContent = v.toFixed(1);
+        document.getElementById('p1-t-sub').textContent = `ที่อุณหภูมิ ${t.toFixed(1)} °C`;
+        document.getElementById('p1-f').textContent = f.toFixed(1);
+        document.getElementById('p1-f-sub').textContent = `โน้ต ${note.name} (ฮาร์มอนิก n = ${n})`;
+        document.getElementById('p1-lambda').textContent = lam.toFixed(1);
+        document.getElementById('p1-lambda-sub').textContent = isOpen ? `ท่อปลายเปิด: L = ${n}λ/2` : `ท่อปลายปิด: L = ${n}λ/4`;
+        document.getElementById('p1-L').textContent = L.toFixed(0);
+        document.getElementById('p1-L-sub').textContent = isOpen ? 'เปิดทั้งสองปลาย (A–A)' : 'ปิด 1 ปลาย (N–A)';
+
+        document.getElementById('p1-questions').innerHTML = `
+          <li>เปรียบเทียบ<strong>ปากท่อปลายเปิด</strong>กับ<strong>ปลายปิด</strong> ตำแหน่งใดเป็นจุดบัพ (N) และตำแหน่งใดเป็นจุดปฏิบัพ (A)?</li>
+          <li>เมื่อใช้ความยาวท่อ L เท่ากัน ความถี่มูลฐาน (n = 1) ของท่อปลายปิดต่างจากท่อปลายเปิดกี่เท่า?</li>
+          <li>เหตุใดท่อปลายปิดจึงเกิดฮาร์มอนิกได้เฉพาะเลขคี่ (n = 1, 3, 5, 7) ในขณะที่ท่อปลายเปิดเกิดได้ทุกจำนวนเต็ม?</li>
+        `;
+
+        document.getElementById('p2-step1').textContent = `v = 331 + 0.6(${t.toFixed(1)}) = ${v.toFixed(1)} m/s`;
+        document.getElementById('p2-step2-title').textContent = `ขั้นที่ 2: แปลงความยาวท่อเป็นเมตร (L)`;
+        document.getElementById('p2-step2-formula').textContent = `L = ${L} cm = ${(L / 100).toFixed(2)} m`;
+        document.getElementById('p2-step2-calc').textContent = `ความยาวคลื่น λ = ${lam.toFixed(1)} cm`;
+        document.getElementById('p2-step3-title').textContent = `ขั้นที่ 3: คำนวณความถี่${isOpen ? 'ท่อปลายเปิด' : 'ท่อปลายปิด'} (n = ${n})`;
+        document.getElementById('p2-step3-calc').textContent =
+          `f_${n} = (${n} × ${v.toFixed(1)}) / (${denom} × ${(L / 100).toFixed(2)}) = ${f.toFixed(1)} Hz`;
+      }
+    }
+
+    function jumpToPredictedPeak(order) {
+      if (state.learningMode !== 'resonance') {
+        setLearningMode('resonance');
+      }
+      const targetL = ((2 * order - 1) * state.resLambdaCm) / 4;
+      if (targetL > 100) {
+        showToast(`ตำแหน่ง L${toSubscript(order)} (${targetL.toFixed(1)} cm) เกินความยาวท่อ 100 cm ลองเพิ่มความถี่ให้สูงขึ้นครับ`, 'warn');
+        return;
+      }
+      document.getElementById('input-res-L').value = targetL.toFixed(1);
+      updateResonancePhysics();
+      showToast(`เลื่อนไปยังจุดสั่นพ้องครั้งที่ ${order} (L${toSubscript(order)} = ${targetL.toFixed(1)} cm)`, 'success');
+    }
+
+    function importFromRecordedPeaks() {
+      if (state.recordedPeaks.length < 2) {
+        showToast('ยังไม่มีค่าในตารางโหมด A อย่างน้อย 2 จุดครับ', 'warn');
+        return;
+      }
+      document.getElementById('input-real-L1').value = state.recordedPeaks[0].toFixed(1);
+      document.getElementById('input-real-L2').value = state.recordedPeaks[1].toFixed(1);
+      updateRealEvaluation();
+      showToast('ดึงค่า L₁ และ L₂ จากตารางโหมด A มาคำนวณแล้ว', 'success');
+    }
+
+    function updateRealEvaluation() {
+      const l1 = parseFloat(document.getElementById('input-real-L1').value);
+      const l2 = parseFloat(document.getElementById('input-real-L2').value);
+
+      const dLEl = document.getElementById('eval-delta-L');
+      const lamEl = document.getElementById('eval-lambda-exp');
+      const vEl = document.getElementById('eval-v-exp');
+      const errEl = document.getElementById('eval-err-pct');
+
+      if (!l1 || !l2 || l2 <= l1) {
+        dLEl.textContent = '-- cm';
+        lamEl.textContent = '-- cm';
+        vEl.textContent = '-- m/s';
+        errEl.textContent = '-- %';
+        errEl.className = 'text-base font-bold text-slate-400';
+        return;
+      }
+
+      const deltaL = l2 - l1;
+      const lambdaExp = 2 * deltaL;
+      const activeFreq = state.learningMode === 'resonance' ? state.resFreq : state.expFreq;
+      const vExp = activeFreq * (lambdaExp / 100);
+      const errPct = (Math.abs(vExp - state.speed) / state.speed) * 100;
+
+      dLEl.textContent = `${deltaL.toFixed(1)} cm`;
+      lamEl.textContent = `${lambdaExp.toFixed(1)} cm`;
+      vEl.textContent = `${vExp.toFixed(1)} m/s`;
+      errEl.textContent = `${errPct.toFixed(2)} %`;
+      errEl.className = errPct <= 5
+        ? 'text-base font-bold text-emerald-400'
+        : (errPct <= 12 ? 'text-base font-bold text-amber-400' : 'text-base font-bold text-rose-400');
+    }
+
+    function copyReflectionSummary() {
+      const s = document.getElementById('ref-success').value.trim() || '-';
+      const c = document.getElementById('ref-challenge').value.trim() || '-';
+      const l = document.getElementById('ref-learning').value.trim() || '-';
+      const l1 = document.getElementById('input-real-L1').value.trim() || '-';
+      const l2 = document.getElementById('input-real-L2').value.trim() || '-';
+      const vExp = document.getElementById('eval-v-exp').textContent;
+      const err = document.getElementById('eval-err-pct').textContent;
+
+      const text =
+`[สรุปผลการทดลอง H&H+STEM เรื่อง การสั่นพ้องของเสียง (Sound Wave X-Ray AR v2)]
+• อุณหภูมิ t = ${state.tempC.toFixed(1)} °C (v ทฤษฎี = ${state.speed.toFixed(1)} m/s) | ความถี่ f = ${state.resFreq} Hz
+• ค่าวัดจริงจากท่อ PVC: L₁ = ${l1} cm, L₂ = ${l2} cm
+• อัตราเร็วเสียงจากการทดลอง v = ${vExp} (ความคลาดเคลื่อน: ${err})
+----------------------------------------
+1. One Success: ${s}
+2. One Challenge: ${c}
+3. One Learning: ${l}`;
+
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('คัดลอกสรุปผลการทดลองเรียบร้อยแล้ว พร้อมวางส่งครูครับ', 'success');
+      } catch (e) {
+        showToast('ไม่สามารถคัดลอกอัตโนมัติได้ กรุณาลองใหม่อีกครั้ง', 'warn');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function setActiveTab(num) {
+      [1, 2, 3].forEach(i => {
+        const btn = document.getElementById(`tab-btn-${i}`);
+        const content = document.getElementById(`tab-content-${i}`);
+        const badge = btn.querySelector('span');
+        if (i === num) {
+          btn.className = 'flex-1 min-w-[200px] px-4 py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-cyan-400 text-cyan-300 bg-cyan-500/10 transition flex items-center justify-center gap-2';
+          badge.className = 'w-5 h-5 rounded-full bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center shrink-0';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'flex-1 min-w-[200px] px-4 py-3.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition flex items-center justify-center gap-2';
+          badge.className = 'w-5 h-5 rounded-full bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center shrink-0';
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    function toggleLayer(layer) {
+      const map = {
+        wave: { prop: 'showWave', id: 'toggle-wave' },
+        particles: { prop: 'showParticles', id: 'toggle-particles' },
+        labels: { prop: 'showLabels', id: 'toggle-labels' }
+      };
+      const item = map[layer];
+      state[item.prop] = !state[item.prop];
+      const btn = document.getElementById(item.id);
+      btn.className = state[item.prop]
+        ? 'px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 backdrop-blur transition'
+        : 'px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium bg-slate-950/75 text-slate-400 border border-slate-700 backdrop-blur transition';
+    }
+
+    function toggleAnimation() {
+      state.isAnimating = !state.isAnimating;
+      document.getElementById('icon-anim').textContent = state.isAnimating ? '⏸' : '▶';
+    }
+
+    // =========================================================================
+    // 7. โหมดกล้อง AR (WebAR Camera Overlay)
+    // =========================================================================
+    async function setViewMode(mode) {
+      state.viewMode = mode;
+      const btnLab = document.getElementById('btn-view-lab');
+      const btnAr = document.getElementById('btn-view-ar');
+      const videoEl = document.getElementById('ar-video');
+      const arControls = document.getElementById('ar-controls-panel');
+      const switchCamBtn = document.getElementById('btn-switch-cam');
+      const fallback = document.getElementById('ar-fallback-banner');
+
+      if (mode === 'lab') {
+        btnLab.className = 'flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 bg-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.4)]';
+        btnAr.className = 'flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 text-slate-300 hover:text-white';
+        stopCamera();
+        videoEl.classList.add('hidden');
+        arControls.classList.add('hidden');
+        switchCamBtn.classList.add('hidden');
+        fallback.classList.add('hidden');
+        viewportEl.classList.add('lab-blueprint');
+      } else {
+        btnAr.className = 'flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]';
+        btnLab.className = 'flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 text-slate-300 hover:text-white';
+        arControls.classList.remove('hidden');
+        switchCamBtn.classList.remove('hidden');
+        viewportEl.classList.remove('lab-blueprint');
+        await startCamera();
+      }
+    }
+
+    async function startCamera() {
+      const videoEl = document.getElementById('ar-video');
+      const fallback = document.getElementById('ar-fallback-banner');
+      const errText = document.getElementById('ar-error-text');
+
+      stopCamera();
+      fallback.classList.add('hidden');
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        errText.textContent = 'อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง (ต้องใช้งานผ่าน HTTPS) สามารถใช้งาน Lab Mode ต่อได้เต็มรูปแบบครับ';
+        fallback.classList.remove('hidden');
+        viewportEl.classList.add('lab-blueprint');
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: state.facingMode } },
+          audio: false
+        });
+        state.mediaStream = stream;
+        videoEl.srcObject = stream;
+        videoEl.classList.remove('hidden');
+        showToast('เปิดกล้อง AR แล้ว! ยกมือถือส่องทาบกับท่อ PVC จุ่มน้ำหรือหลอดจริงได้เลย', 'success');
+      } catch (err) {
+        errText.textContent = 'ไม่ได้รับอนุญาตให้เปิดกล้อง หรือไม่พบกล้องบนอุปกรณ์นี้ สามารถสลับกลับไปใช้ Lab Mode ได้ทันทีครับ';
+        fallback.classList.remove('hidden');
+        viewportEl.classList.add('lab-blueprint');
+      }
+    }
+
+    function stopCamera() {
+      if (state.mediaStream) {
+        state.mediaStream.getTracks().forEach(t => t.stop());
+        state.mediaStream = null;
+      }
+      const videoEl = document.getElementById('ar-video');
+      if (videoEl) videoEl.srcObject = null;
+    }
+
+    async function switchCamera() {
+      state.facingMode = state.facingMode === 'environment' ? 'user' : 'environment';
+      await startCamera();
+    }
+
+    function updateAROverlay() {
+      const sc = parseFloat(document.getElementById('input-ar-scale').value);
+      const op = parseFloat(document.getElementById('input-ar-opacity').value);
+      state.arScale = sc / 100;
+      state.arPipeOpacity = op / 100;
+      document.getElementById('val-ar-scale').textContent = `${sc}%`;
+      document.getElementById('val-ar-opacity').textContent = `${op}%`;
+    }
+
+    function resetAROverlay() {
+      document.getElementById('input-ar-scale').value = 100;
+      document.getElementById('input-ar-opacity').value = 50;
+      updateAROverlay();
+      showToast('รีเซ็ตขนาดและความโปร่งใส AR แล้ว', 'info');
+    }
+
+    // =========================================================================
+    // 8. ระบบสร้างเสียงจำลอง Web Audio API (ปรับ Gain ดัง–เบาจริงตามการสั่นพ้อง)
+    // =========================================================================
+    function toggleAudioTone() {
+      if (state.isPlayingAudio) stopAudioTone();
+      else startAudioTone();
+    }
+
+    function getTargetAudioParams() {
+      if (state.learningMode === 'resonance') {
+        const freq = Math.max(120, Math.min(2500, state.resFreq));
+        // คุม Gain ให้ปลอดภัย (0.015 เบาสุดชัดเจน ถึง 0.21 ดังก้องสุดแต่สบายหู)
+        const gain = 0.015 + 0.195 * state.resStrength;
+        return { freq, gain };
+      } else {
+        const freq = Math.max(100, Math.min(3200, state.expFreq));
+        return { freq, gain: 0.14 };
+      }
+    }
+
+    function syncAudioOutput() {
+      if (!state.isPlayingAudio || !state.oscillator || !state.gainNode || !state.audioCtx) return;
+      const { freq, gain } = getTargetAudioParams();
+      const now = state.audioCtx.currentTime;
+      state.oscillator.frequency.setTargetAtTime(freq, now, 0.025);
+      state.gainNode.gain.setTargetAtTime(gain, now, 0.035);
+    }
+
+    function startAudioTone() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!state.audioCtx) state.audioCtx = new AudioContext();
+        if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
+
+        const osc = state.audioCtx.createOscillator();
+        const gainNode = state.audioCtx.createGain();
+        const { freq, gain } = getTargetAudioParams();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, state.audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.0001, state.audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(gain, state.audioCtx.currentTime + 0.08);
+
+        osc.connect(gainNode);
+        gainNode.connect(state.audioCtx.destination);
+        osc.start();
+
+        state.oscillator = osc;
+        state.gainNode = gainNode;
+        state.isPlayingAudio = true;
+        updateAudioButtonLabel();
+      } catch (e) {
+        showToast('ไม่สามารถเปิดเสียงบนอุปกรณ์นี้ได้', 'warn');
+      }
+    }
+
+    function stopAudioTone() {
+      if (state.oscillator && state.gainNode && state.audioCtx) {
+        const now = state.audioCtx.currentTime;
+        state.gainNode.gain.cancelScheduledValues(now);
+        state.gainNode.gain.setValueAtTime(state.gainNode.gain.value, now);
+        state.gainNode.gain.linearRampToValueAtTime(0.0001, now + 0.06);
+        const oldOsc = state.oscillator;
+        setTimeout(() => {
+          try { oldOsc.stop(); oldOsc.disconnect(); } catch (e) {}
+        }, 70);
+      }
+      state.oscillator = null;
+      state.gainNode = null;
+      state.isPlayingAudio = false;
+      updateAudioButtonLabel();
+    }
+
+    function updateAudioButtonLabel() {
+      const btn = document.getElementById('btn-play-tone');
+      const icon = document.getElementById('tone-icon');
+      const label = document.getElementById('tone-label');
+      const eq = document.getElementById('tone-eq');
+
+      if (state.isPlayingAudio) {
+        btn.className = 'w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:brightness-110 shadow-[0_0_18px_rgba(244,63,94,0.45)]';
+        icon.textContent = '⏹';
+        label.textContent = 'หยุดเสียงจำลอง (Stop Tone)';
+        eq.classList.remove('hidden');
+        eq.classList.add('flex');
+      } else {
+        btn.className = 'w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 hover:brightness-110 shadow-[0_0_20px_rgba(245,158,11,0.35)]';
+        icon.textContent = '🔊';
+        label.textContent = state.learningMode === 'resonance'
+          ? 'เปิดเสียงจำลอง (ฟังเสียงดัง–เบา)'
+          : 'ฟังเสียงจำลอง (Play Tone)';
+        eq.classList.add('hidden');
+        eq.classList.remove('flex');
+      }
+    }
+
+    // =========================================================================
+    // 9. การวาด Canvas 60fps (รองรับทั้งโหมด A หลอดเรโซแนนซ์ และโหมด B)
+    // =========================================================================
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = viewportEl.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawFrame(ts) {
+      if (!state.lastTime) state.lastTime = ts;
+      const dt = Math.min((ts - state.lastTime) / 1000, 0.05);
+      state.lastTime = ts;
+
+      const activeFreq = state.learningMode === 'resonance' ? state.resFreq : state.expFreq;
+      if (state.isAnimating) {
+        const angularSpeed = 3.5 + Math.min(activeFreq / 180, 8.0);
+        state.phase += angularSpeed * dt;
+      }
+
+      const w = viewportEl.clientWidth;
+      const h = viewportEl.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      if (state.viewMode === 'ar') {
+        ctx.scale(state.arScale, state.arScale);
+      }
+
+      const pipeAlpha = state.viewMode === 'ar' ? state.arPipeOpacity : 0.88;
+      const cosT = Math.cos(state.phase);
+
+      if (state.learningMode === 'resonance') {
+        drawResonanceTubeScene(w, h, pipeAlpha, cosT);
+      } else {
+        drawExplorerPipeScene(w, h, pipeAlpha, cosT);
+      }
+
+      ctx.restore();
+      requestAnimationFrame(drawFrame);
+    }
+
+    // ---------- วาดฉากโหมด A: หลอดเรโซแนนซ์ (แนวตั้ง / แนวนอน) ----------
+    function drawResonanceTubeScene(w, h, pipeAlpha, cosT) {
+      const isVert = state.orientation === 'vertical';
+
+      // กำหนดขนาดท่อรวม 100 cm ในระบบพิกัดแนวนอนก่อน แล้วหมุน 90° ถ้าเป็นแนวตั้ง
+      // เพื่อความสะอาดของโค้ด วาดแนวท่อจากแกน x = -totalLen/2 (ปากท่อ 0 cm) ไป +totalLen/2 (ก้นท่อ 100 cm)
+      const totalLen = isVert
+        ? Math.min(h * 0.68, 320)
+        : Math.min(w * 0.72, 480);
+      const tubeThick = isVert
+        ? Math.min(w * 0.24, 96)
+        : Math.min(h * 0.30, 108);
+
+      const startX = -totalLen / 2; // ตำแหน่ง 0 cm (ปากท่อ)
+      const endX = totalLen / 2;    // ตำแหน่ง 100 cm (ก้นท่อ)
+      const halfT = tubeThick / 2;
+      const airLenPx = (state.resLengthCm / 100) * totalLen;
+      const boundaryX = startX + airLenPx; // ตำแหน่งผิวน้ำ / หน้าลูกสูบ (L)
+
+      ctx.save();
+      if (isVert) {
+        // เลื่อนลงเล็กน้อยเผื่อลำโพงด้านบน แล้วหมุน 90 องศา (x บวก = ลงด้านล่าง)
+        ctx.translate(0, 18);
+        ctx.rotate(Math.PI / 2);
+      } else {
+        ctx.translate(14, 0);
+      }
+
+      // 1. วาดลำโพง/แหล่งกำเนิดเสียงที่ปากท่อ (ด้านซ้ายของแกน x = startX - 32)
+      drawSpeakerAtMouth(startX - 28, 0, halfT * 0.55, cosT);
+
+      // 2. วาดตัวท่อด้านหลังโปร่งแสง (0 ถึง 100 cm)
+      const bodyGrad = ctx.createLinearGradient(0, -halfT, 0, halfT);
+      bodyGrad.addColorStop(0, `rgba(34, 211, 238, ${0.22 * pipeAlpha})`);
+      bodyGrad.addColorStop(0.3, `rgba(15, 23, 42, ${0.38 * pipeAlpha})`);
+      bodyGrad.addColorStop(0.7, `rgba(15, 23, 42, ${0.42 * pipeAlpha})`);
+      bodyGrad.addColorStop(1, `rgba(34, 211, 238, ${0.24 * pipeAlpha})`);
+      ctx.fillStyle = bodyGrad;
+      ctx.fillRect(startX, -halfT, totalLen, tubeThick);
+
+      // 3. วาดส่วนปิดปลาย (น้ำสีฟ้าโปร่งใส หรือ ลูกสูบก้านชัก)
+      if (state.resStyle === 'water') {
+        // น้ำจาก boundaryX ถึง endX
+        const waterGrad = ctx.createLinearGradient(boundaryX, 0, endX, 0);
+        waterGrad.addColorStop(0, `rgba(56, 189, 248, ${0.52 * Math.max(pipeAlpha, 0.45)})`);
+        waterGrad.addColorStop(1, `rgba(2, 132, 199, ${0.72 * Math.max(pipeAlpha, 0.45)})`);
+        ctx.fillStyle = waterGrad;
+        ctx.fillRect(boundaryX, -halfT + 2, endX - boundaryX, tubeThick - 4);
+
+        // เส้นผิวน้ำเรืองแสง (Meniscus)
+        ctx.strokeStyle = '#7DD3FC';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(boundaryX, -halfT + 2);
+        ctx.quadraticCurveTo(boundaryX + 5, 0, boundaryX, halfT - 2);
+        ctx.stroke();
+      } else {
+        // ลูกสูบฟองน้ำ + ก้านชัก
+        const pistonW = 16;
+        // ก้านชักจากด้านหลังลูกสูบออกนอกท่อ
+        ctx.fillStyle = '#94A3B8';
+        ctx.fillRect(boundaryX + pistonW, -4, (endX - boundaryX) + 18, 8);
+        // ตัวฟองน้ำ/ลูกสูบ
+        const pGrad = ctx.createLinearGradient(0, -halfT, 0, halfT);
+        pGrad.addColorStop(0, '#D97706');
+        pGrad.addColorStop(0.5, '#FBBF24');
+        pGrad.addColorStop(1, '#B45309');
+        ctx.fillStyle = pGrad;
+        ctx.fillRect(boundaryX, -halfT + 2, pistonW, tubeThick - 4);
+        ctx.strokeStyle = '#FEF3C7';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(boundaryX, -halfT + 2, pistonW, tubeThick - 4);
+      }
+
+      // 4. เส้นแกนกลางลำอากาศ
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(startX, 0);
+      ctx.lineTo(boundaryX, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      // 5. วาดอนุภาคอากาศภายในลำอากาศ (0 ถึง L)
+      const kWave = (2 * Math.PI) / state.resLambdaCm; // rad/cm
+      const ampScale = 0.2 + 0.8 * state.resStrength;
+
+      if (state.showParticles) {
+        const maxDispPx = Math.min(airLenPx * 0.08, 14) * ampScale;
+        for (let i = 0; i < PARTICLES.length; i++) {
+          const p = PARTICLES[i];
+          const xCm = p.u * state.resLengthCm;
+          // ผิวน้ำ/ลูกสูบ (xCm = L) เป็นจุดบัพเสมอ: sin(k * (L - x))
+          const spatial = Math.sin(kWave * (state.resLengthCm - xCm));
+          const dx = spatial * maxDispPx * cosT;
+          const px = startX + p.u * airLenPx + dx;
+          const py = p.v * halfT;
+          if (px >= boundaryX - 2 || px <= startX - 4) continue;
+
+          const intensity = Math.abs(spatial);
+          ctx.beginPath();
+          ctx.arc(px, py, p.size, 0, Math.PI * 2);
+          if (intensity < 0.22) {
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.8)'; // จุดบัพ (สีชมพูแดง)
+          } else {
+            ctx.fillStyle = state.resStrength >= 0.85
+              ? `rgba(16, 185, 129, ${0.45 + 0.55 * intensity})`
+              : `rgba(34, 211, 238, ${0.4 + 0.5 * intensity})`;
+          }
+          ctx.fill();
+        }
+      }
+
+      // 6. วาดกราฟคลื่นนิ่งภายในลำอากาศ (0 ถึง L)
+      if (state.showWave) {
+        const waveAmpY = halfT * 0.82 * ampScale;
+        const steps = Math.max(40, Math.round(airLenPx));
+        const isPeak = state.resStrength >= 0.86;
+        const waveColor = isPeak ? '#10B981' : '#22D3EE';
+
+        ctx.save();
+        // เส้นประ Envelope
+        ctx.strokeStyle = isPeak ? 'rgba(16, 185, 129, 0.35)' : 'rgba(34, 211, 238, 0.25)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 4]);
+        [1, -1].forEach(sign => {
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const u = i / steps;
+            const xCm = u * state.resLengthCm;
+            const xPx = startX + u * airLenPx;
+            const yPx = sign * Math.sin(kWave * (state.resLengthCm - xCm)) * waveAmpY;
+            if (i === 0) ctx.moveTo(xPx, yPx);
+            else ctx.lineTo(xPx, yPx);
+          }
+          ctx.stroke();
+        });
+
+        // เงาคลื่นเฟสตรงข้าม
+        ctx.setLineDash([]);
+        ctx.strokeStyle = isPeak ? 'rgba(52, 211, 153, 0.45)' : 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const u = i / steps;
+          const xCm = u * state.resLengthCm;
+          const xPx = startX + u * airLenPx;
+          const yPx = -Math.sin(kWave * (state.resLengthCm - xCm)) * waveAmpY * cosT;
+          if (i === 0) ctx.moveTo(xPx, yPx);
+          else ctx.lineTo(xPx, yPx);
+        }
+        ctx.stroke();
+
+        // คลื่นนิ่งหลักเรืองแสง
+        ctx.shadowColor = waveColor;
+        ctx.shadowBlur = isPeak ? 18 : 8;
+        ctx.strokeStyle = waveColor;
+        ctx.lineWidth = isPeak ? 3.5 : 2.5;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const u = i / steps;
+          const xCm = u * state.resLengthCm;
+          const xPx = startX + u * airLenPx;
+          const yPx = Math.sin(kWave * (state.resLengthCm - xCm)) * waveAmpY * cosT;
+          if (i === 0) ctx.moveTo(xPx, yPx);
+          else ctx.lineTo(xPx, yPx);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 7. วาดขอบท่อเรืองแสง
+      const strokeA = Math.max(pipeAlpha, 0.45);
+      ctx.strokeStyle = `rgba(34, 211, 238, ${0.85 * strokeA})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(startX, -halfT);
+      ctx.lineTo(endX, -halfT);
+      ctx.moveTo(startX, halfT);
+      ctx.lineTo(endX, halfT);
+      ctx.stroke();
+
+      // ปากท่อเปิดด้านซ้าย + ก้นท่อด้านขวา
+      ctx.beginPath();
+      ctx.ellipse(startX, 0, 8, halfT, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(endX, -halfT);
+      ctx.lineTo(endX, halfT);
+      ctx.stroke();
+
+      // 8. สเกลไม้บรรทัดเซนติเมตร (0 - 100 cm) ข้างท่อด้านล่าง (หรือซ้ายในแนวตั้ง)
+      drawRulerScale(startX, totalLen, halfT + 12, isVert);
+
+      // 9. ป้ายกำกับ N (บัพ) และ A (ปฏิบัพ)
+      if (state.showLabels) {
+        const halfLam = state.resLambdaCm / 2;
+        const quarterLam = state.resLambdaCm / 4;
+
+        // จุดบัพ (N) ที่ผิวน้ำ/ลูกสูบ และถอยหลังทีละ lambda/2
+        for (let m = 0; ; m++) {
+          const xCm = state.resLengthCm - m * halfLam;
+          if (xCm < -0.5) break;
+          const xPx = startX + (xCm / 100) * totalLen;
+          ctx.beginPath();
+          ctx.arc(xPx, 0, 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#F43F5E';
+          ctx.fill();
+          drawRotatedBadge(xPx, -halfT - 18, 'N', '#F43F5E', 'rgba(244, 63, 94, 0.22)', isVert);
+        }
+
+        // จุดปฏิบัพ (A) ถอยหลังจากผิวน้ำทีละ (2m+1)*lambda/4
+        for (let m = 0; ; m++) {
+          const xCm = state.resLengthCm - (2 * m + 1) * quarterLam;
+          if (xCm < -2.0) break;
+          const xPx = startX + (Math.max(0, xCm) / 100) * totalLen;
+          drawRotatedBadge(xPx, -halfT - 18, 'A', '#10B981', 'rgba(16, 185, 129, 0.22)', isVert);
+        }
+      }
+
+      // 10. เส้นชี้ระยะ L ปัจจุบัน
+      drawResonanceLengthMarker(startX, boundaryX, -halfT - 38, isVert);
+
+      ctx.restore();
+    }
+
+    function drawSpeakerAtMouth(cx, cy, radius, cosT) {
+      ctx.save();
+      // ตัวลำโพง
+      ctx.fillStyle = '#1E293B';
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(cx - 12, cy - 12, 12, 24, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      // กรวยลำโพงหันเข้าหาปากท่อ
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 10);
+      ctx.lineTo(cx + 10, cy - 18);
+      ctx.lineTo(cx + 10, cy + 18);
+      ctx.lineTo(cx, cy + 10);
+      ctx.closePath();
+      ctx.fillStyle = '#334155';
+      ctx.fill();
+      ctx.stroke();
+
+      // วงคลื่นเสียงออกจากลำโพง
+      const pulse = (Math.sin(state.phase * 1.4) + 1) / 2;
+      ctx.strokeStyle = `rgba(245, 158, 11, ${0.35 + 0.45 * pulse})`;
+      ctx.lineWidth = 1.8;
+      [14, 20].forEach((r, idx) => {
+        ctx.beginPath();
+        ctx.arc(cx + 8, cy, r + pulse * 3 * (idx + 1), -0.65, 0.65);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    function drawRulerScale(startX, totalLen, yPos, isVert) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.65)';
+      ctx.fillStyle = '#94A3B8';
+      ctx.lineWidth = 1.2;
+
+      // เส้นหลักไม้บรรทัด
+      ctx.beginPath();
+      ctx.moveTo(startX, yPos);
+      ctx.lineTo(startX + totalLen, yPos);
+      ctx.stroke();
+
+      for (let cm = 0; cm <= 100; cm += 5) {
+        const x = startX + (cm / 100) * totalLen;
+        const isMajor = cm % 10 === 0;
+        const tickLen = isMajor ? 9 : 5;
+        ctx.beginPath();
+        ctx.moveTo(x, yPos);
+        ctx.lineTo(x, yPos + tickLen);
+        ctx.stroke();
+
+        if (cm % 20 === 0) {
+          ctx.save();
+          ctx.translate(x, yPos + 20);
+          if (isVert) ctx.rotate(-Math.PI / 2);
+          ctx.font = '500 10px "Prompt", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${cm}`, 0, 0);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawResonanceLengthMarker(startX, boundaryX, yPos, isVert) {
+      const midX = (startX + boundaryX) / 2;
+      ctx.save();
+      ctx.strokeStyle = '#10B981';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(startX, yPos);
+      ctx.lineTo(boundaryX, yPos);
+      ctx.moveTo(startX, yPos - 5);
+      ctx.lineTo(startX, yPos + 5);
+      ctx.moveTo(boundaryX, yPos - 5);
+      ctx.lineTo(boundaryX, yPos + 5);
+      ctx.stroke();
+
+      // ป้ายตัวเลข L
+      ctx.save();
+      ctx.translate(midX, yPos - 14);
+      if (isVert) ctx.rotate(-Math.PI / 2);
+      const label = `L = ${state.resLengthCm.toFixed(1)} cm`;
+      ctx.font = '600 11px "Prompt", sans-serif';
+      const tw = ctx.measureText(label).width + 12;
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.9)';
+      ctx.beginPath();
+      ctx.roundRect(-tw / 2, -10, tw, 20, 6);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.7)';
+      ctx.stroke();
+      ctx.fillStyle = '#34D399';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, 0, 0.5);
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    function drawRotatedBadge(x, y, text, color, bg, isVert) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (isVert) ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = bg;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.roundRect(-10, -10, 20, 20, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = '700 11px "Prompt", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 0, 0.5);
+      ctx.restore();
+    }
+
+    // ---------- วาดฉากโหมด B: สำรวจท่อปลายเปิด–ปิด ----------
+    function drawExplorerPipeScene(w, h, pipeAlpha, cosT) {
+      const isVert = state.orientation === 'vertical';
+      const maxLen = isVert ? Math.min(h * 0.66, 310) : Math.min(w * 0.74, 500);
+      const minLen = isVert ? Math.min(h * 0.28, 130) : Math.min(w * 0.30, 170);
+      const pipeLen = minLen + ((state.expLengthCm - 10) / 90) * (maxLen - minLen);
+      const pipeThick = isVert ? Math.min(w * 0.24, 96) : Math.min(h * 0.32, 118);
+      const leftX = -pipeLen / 2;
+      const rightX = pipeLen / 2;
+      const halfT = pipeThick / 2;
+
+      ctx.save();
+      if (isVert) ctx.rotate(Math.PI / 2);
+
+      // ตัวท่อโปร่งแสง
+      const grad = ctx.createLinearGradient(0, -halfT, 0, halfT);
+      grad.addColorStop(0, `rgba(34, 211, 238, ${0.22 * pipeAlpha})`);
+      grad.addColorStop(0.5, `rgba(15, 23, 42, ${0.34 * pipeAlpha})`);
+      grad.addColorStop(1, `rgba(34, 211, 238, ${0.24 * pipeAlpha})`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(leftX, -halfT, pipeLen, pipeThick);
+
+      // แกนกลาง
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(leftX, 0);
+      ctx.lineTo(rightX, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      const spatialFn = (u) => state.expPipeType === 'open'
+        ? Math.cos(state.expHarmonic * Math.PI * u)
+        : Math.sin((state.expHarmonic * Math.PI * u) / 2);
+
+      // อนุภาคอากาศ
+      if (state.showParticles) {
+        const maxDisp = Math.min(pipeLen / (state.expHarmonic * 5), 16);
+        for (let i = 0; i < PARTICLES.length; i++) {
+          const p = PARTICLES[i];
+          const amp = spatialFn(p.u);
+          const px = leftX + p.u * pipeLen + amp * maxDisp * cosT;
+          const py = p.v * halfT;
+          ctx.beginPath();
+          ctx.arc(px, py, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = Math.abs(amp) < 0.22
+            ? 'rgba(244, 63, 94, 0.78)'
+            : `rgba(34, 211, 238, ${0.42 + 0.55 * Math.abs(amp)})`;
+          ctx.fill();
+        }
+      }
+
+      // กราฟคลื่นนิ่ง
+      if (state.showWave) {
+        const waveAmpY = halfT * 0.8;
+        const steps = 120;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.28)';
+        ctx.setLineDash([4, 4]);
+        [1, -1].forEach(sign => {
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const u = i / steps;
+            const x = leftX + u * pipeLen;
+            const y = sign * spatialFn(u) * waveAmpY;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const u = i / steps;
+          const x = leftX + u * pipeLen;
+          const y = -spatialFn(u) * waveAmpY * cosT;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        ctx.shadowColor = '#22D3EE';
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = '#22D3EE';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const u = i / steps;
+          const x = leftX + u * pipeLen;
+          const y = spatialFn(u) * waveAmpY * cosT;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ขอบท่อ + ฝาปิด
+      const strokeA = Math.max(pipeAlpha, 0.45);
+      ctx.strokeStyle = `rgba(34, 211, 238, ${0.85 * strokeA})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(leftX, -halfT);
+      ctx.lineTo(rightX, -halfT);
+      ctx.moveTo(leftX, halfT);
+      ctx.lineTo(rightX, halfT);
+      ctx.stroke();
+
+      // ปลายขวาเปิดเสมอ
+      ctx.beginPath();
+      ctx.ellipse(rightX, 0, 9, halfT, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      if (state.expPipeType === 'open') {
+        ctx.beginPath();
+        ctx.ellipse(leftX, 0, 9, halfT, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#F59E0B';
+        ctx.beginPath();
+        ctx.roundRect(leftX - 12, -halfT - 3, 14, pipeThick + 6, [5, 2, 2, 5]);
+        ctx.fill();
+        ctx.strokeStyle = '#FEF3C7';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // ป้าย N / A
+      if (state.showLabels) {
+        const n = state.expHarmonic;
+        const nodes = [];
+        const antinodes = [];
+        if (state.expPipeType === 'open') {
+          for (let k = 0; k <= n; k++) antinodes.push(k / n);
+          for (let k = 0; k < n; k++) nodes.push((2 * k + 1) / (2 * n));
+        } else {
+          for (let k = 0; k < (n + 1) / 2; k++) {
+            nodes.push((2 * k) / n);
+            antinodes.push((2 * k + 1) / n);
+          }
+        }
+        nodes.forEach(u => {
+          const x = leftX + u * pipeLen;
+          ctx.beginPath();
+          ctx.arc(x, 0, 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#F43F5E';
+          ctx.fill();
+          drawRotatedBadge(x, -halfT - 20, 'N', '#F43F5E', 'rgba(244, 63, 94, 0.22)', isVert);
+        });
+        antinodes.forEach(u => {
+          const x = leftX + u * pipeLen;
+          drawRotatedBadge(x, -halfT - 20, 'A', '#10B981', 'rgba(16, 185, 129, 0.22)', isVert);
+        });
+      }
+
+      // เส้นบอกความยาว L
+      const dimY = halfT + 26;
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(leftX, dimY);
+      ctx.lineTo(rightX, dimY);
+      ctx.moveTo(leftX, dimY - 5);
+      ctx.lineTo(leftX, dimY + 5);
+      ctx.moveTo(rightX, dimY - 5);
+      ctx.lineTo(rightX, dimY + 5);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(0, dimY + 15);
+      if (isVert) ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = '#FBBF24';
+      ctx.font = '600 12px "Prompt", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`L = ${state.expLengthCm} cm`, 0, 0);
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 10. เริ่มต้นระบบ
+    // =========================================================================
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('beforeunload', () => {
+      stopCamera();
+      stopAudioTone();
+    });
+
+    window.onload = function () {
+      resizeCanvas();
+      renderExplorerHarmonics();
+      updateAllPhysics();
+      setLearningMode('resonance');
+      requestAnimationFrame(drawFrame);
+    };
+  </script>
+</body>
+</html>
