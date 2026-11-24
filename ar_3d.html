@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>จำลองกฎมือขวา AR & 3D | แรงแม่เหล็ก F = q(v × B)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js (r128) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- MediaPipe Hands & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+    <!-- Google Fonts: Prompt (Thai) & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        lab: {
+                            950: '#040812',
+                            900: '#0a1122',
+                            800: '#111c33',
+                            700: '#1c2c4c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #040812;
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.07) 0%, transparent 40%);
+            color: #e2e8f0;
+            font-family: 'Prompt', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Custom Range Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(30, 41, 59, 0.9);
+            height: 6px;
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #22d3ee;
+            border: 2px solid #0f172a;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.6);
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* Subtle Sci-Fi Grid */
+        .sci-grid {
+            background-size: 32px 32px;
+            background-image:
+                linear-gradient(to right, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+        }
+
+        /* Floating 3D Labels */
+        .vec-label {
+            position: absolute;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            font-family: 'JetBrains Mono', 'Prompt', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            white-space: nowrap;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(4px);
+            transition: opacity 0.15s ease;
+            z-index: 15;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a1122;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+
+    <!-- ==================== HEADER BAR ==================== -->
+    <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-lab-950/85 backdrop-blur-xl">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <!-- Brand -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-400/40 flex items-center justify-center shadow-lg shadow-cyan-500/10">
+                    <span class="text-xl" aria-hidden="true">🤚</span>
+                </div>
+                <div>
+                    <h1 class="text-sm sm:text-base font-bold text-white leading-tight tracking-tight">
+                        กฎมือขวา AR &amp; 3D <span class="hidden sm:inline text-cyan-400 font-normal">| แรงแม่เหล็ก</span>
+                    </h1>
+                    <p class="text-[11px] sm:text-xs text-slate-400 font-mono">
+                        F = q(v × B) • ห้องปฏิบัติการฟิสิกส์ สสวท.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher & Challenge Toggle -->
+            <div class="flex items-center gap-2">
+                <!-- Mode Segmented Control -->
+                <div class="flex bg-slate-900/90 p-1 rounded-xl border border-slate-700/70">
+                    <button id="btn-mode-3d" onclick="switchMode('3d')"
+                        class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm">
+                        <span>🧊</span>
+                        <span>มือ 3 มิติ</span>
+                    </button>
+                    <button id="btn-mode-ar" onclick="switchMode('ar')"
+                        class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-white border border-transparent">
+                        <span>📷</span>
+                        <span>กล้อง AR</span>
+                    </button>
+                </div>
+
+                <!-- Challenge Mode Button -->
+                <button id="btn-toggle-challenge" onclick="toggleChallengeMode()"
+                    class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40">
+                    <span>🎯</span>
+                    <span class="hidden sm:inline">ภารกิจ 5 ข้อ</span>
+                    <span class="sm:hidden">ภารกิจ</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== MAIN WORKSPACE ==================== -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+        <!-- LEFT / TOP: INTERACTIVE VIEWPORT (8 cols on desktop) -->
+        <section class="lg:col-span-8 flex flex-col gap-3">
+            <!-- Viewport Container -->
+            <div id="viewport-wrapper" class="relative w-full h-[54vh] min-h-[360px] sm:h-[62vh] lg:h-[68vh] rounded-2xl overflow-hidden border border-slate-700/70 bg-lab-900 sci-grid shadow-2xl shadow-black/60 select-none">
+
+                <!-- 1) 3D MODE CANVAS CONTAINER -->
+                <div id="mode-3d-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing touch-none">
+                    <!-- Three.js WebGL Canvas is injected here -->
+                    <!-- Floating 3D Labels -->
+                    <div id="label-v" class="vec-label bg-cyan-950/85 text-cyan-300 border border-cyan-400/60">v (ความเร็ว)</div>
+                    <div id="label-b" class="vec-label bg-emerald-950/85 text-emerald-300 border border-emerald-400/60">B (สนามแม่เหล็ก)</div>
+                    <div id="label-f" class="vec-label bg-red-950/85 text-red-300 border border-red-400/60">F (แรงแม่เหล็ก)</div>
+
+                    <!-- Drag Hint Badge -->
+                    <div class="absolute bottom-3 left-3 z-20 pointer-events-none flex items-center gap-2 bg-slate-950/75 backdrop-blur-md border border-slate-700/60 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs text-slate-300">
+                        <span>🖱️</span>
+                        <span>ลากบนจอเพื่อหมุนมือขวา 360°</span>
+                    </div>
+                </div>
+
+                <!-- 2) AR CAMERA MODE CONTAINER -->
+                <div id="mode-ar-container" class="hidden absolute inset-0 w-full h-full bg-slate-950">
+                    <!-- Hidden raw webcam video -->
+                    <video id="ar-video" class="hidden" playsinline autoplay muted></video>
+                    <!-- Output AR Canvas -->
+                    <canvas id="ar-canvas" class="w-full h-full block object-cover"></canvas>
+
+                    <!-- AR Loading / Idle Overlay -->
+                    <div id="ar-placeholder" class="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center bg-lab-950/90 backdrop-blur-md">
+                        <div class="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-3xl mb-4 shadow-lg shadow-cyan-500/10">
+                            📷
+                        </div>
+                        <h2 class="text-lg sm:text-xl font-bold text-white mb-2">โหมดกล้อง AR จับมือขวาจริง</h2>
+                        <p class="text-xs sm:text-sm text-slate-300 max-w-md mb-5 leading-relaxed">
+                            เปิดกล้องเว็บแคมแล้วยก <strong class="text-cyan-300">มือขวาแบบแบมือ</strong> (นิ้วทั้งสี่ชิดกันเหยียดตรง นิ้วหัวแม่มือกางตั้งฉาก) เพื่อจำลองเวกเตอร์ <span class="text-cyan-400 font-semibold">v</span>, <span class="text-emerald-400 font-semibold">B</span>, <span class="text-red-400 font-semibold">F</span> ซ้อนบนมือจริงแบบเรียลไทม์
+                        </p>
+                        <button id="btn-start-ar" onclick="startARCamera()"
+                            class="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/25 transition-all active:scale-95 flex items-center gap-2">
+                            <span>🚀</span>
+                            <span>เริ่มเปิดกล้อง AR</span>
+                        </button>
+                        <p id="ar-loading-text" class="hidden mt-4 text-xs text-cyan-300 animate-pulse">
+                            กำลังโหลดโมเดล AI MediaPipe Hands และเชื่อมต่อกล้อง...
+                        </p>
+                    </div>
+
+                    <!-- AR Error Overlay -->
+                    <div id="ar-error-box" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center bg-slate-950/95 backdrop-blur-md">
+                        <div class="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/40 flex items-center justify-center text-2xl mb-3">
+                            ⚠️
+                        </div>
+                        <h3 class="text-base sm:text-lg font-bold text-red-300 mb-1.5">ไม่สามารถเปิดกล้องได้</h3>
+                        <p id="ar-error-msg" class="text-xs sm:text-sm text-slate-300 max-w-md mb-5">
+                            กรุณาอนุญาตการใช้งานกล้องในเบราว์เซอร์ หรือตรวจสอบว่าอุปกรณ์มีกล้องเว็บแคมเชื่อมต่ออยู่
+                        </p>
+                        <div class="flex flex-wrap justify-center gap-2.5">
+                            <button onclick="startARCamera()"
+                                class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-medium border border-slate-600 transition">
+                                ลองใหม่อีกครั้ง
+                            </button>
+                            <button onclick="switchMode('3d')"
+                                class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs sm:text-sm font-bold transition">
+                                ใช้งานโหมดมือ 3 มิติแทน
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Left Hand Warning Banner -->
+                    <div id="ar-left-hand-warning" class="hidden absolute top-14 left-1/2 -translate-x-1/2 z-25 w-[90%] max-w-md bg-amber-500/90 text-slate-950 px-4 py-2.5 rounded-xl shadow-xl border border-amber-300 flex items-center gap-2.5 text-xs sm:text-sm font-bold animate-bounce">
+                        <span class="text-lg">⚠️</span>
+                        <span>ตรวจพบมือซ้าย! กรุณาเปลี่ยนมาใช้ <u>มือขวา</u> ตามกฎมือขวา</span>
+                    </div>
+
+                    <!-- AR No Hand Detected Hint -->
+                    <div id="ar-no-hand-hint" class="hidden absolute bottom-3 left-3 z-20 bg-slate-950/80 backdrop-blur-md border border-slate-700/70 px-3 py-1.5 rounded-xl text-xs text-slate-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                        <span>ยกมือขวาแบมือให้อยู่ในกรอบกล้อง...</span>
+                    </div>
+                </div>
+
+                <!-- TOP-LEFT FLOATING FORMULA & CHARGE BADGE -->
+                <div class="absolute top-3 left-3 z-20 pointer-events-none flex flex-wrap items-center gap-2">
+                    <div class="bg-slate-950/80 backdrop-blur-md border border-slate-700/70 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
+                        <span class="font-mono text-xs sm:text-sm font-bold text-white">
+                            <span id="hud-formula-f" class="text-red-400">F</span> =
+                            <span id="hud-formula-q" class="text-red-300">+q</span>(<span class="text-cyan-400">v</span> × <span class="text-emerald-400">B</span>)
+                        </span>
+                    </div>
+                    <div id="hud-mode-pill" class="hidden sm:flex bg-slate-950/75 backdrop-blur-md border border-slate-700/60 px-2.5 py-1.5 rounded-xl text-[11px] text-slate-300 items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        <span id="hud-mode-text">โหมดมือ 3 มิติ</span>
+                    </div>
+                </div>
+
+                <!-- TOP-RIGHT VECTOR LEGEND -->
+                <div class="absolute top-3 right-3 z-20 pointer-events-none hidden sm:flex flex-col gap-1 bg-slate-950/75 backdrop-blur-md border border-slate-700/60 p-2.5 rounded-xl text-[11px]">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
+                        <span class="text-slate-200"><strong class="text-cyan-300">นิ้วโป้ง</strong> = ความเร็ว v</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+                        <span class="text-slate-200"><strong class="text-emerald-300">4 นิ้ว</strong> = สนามแม่เหล็ก B</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="legend-f-dot" class="w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_8px_#f87171]"></span>
+                        <span id="legend-f-text" class="text-slate-200"><strong class="text-red-300">ฝ่ามือ</strong> = แรง F (+q)</span>
+                    </div>
+                </div>
+
+                <!-- CHALLENGE ALIGNMENT PROGRESS RING OVERLAY (Bottom Right of Viewport) -->
+                <div id="challenge-hold-indicator" class="hidden absolute bottom-3 right-3 z-25 bg-emerald-950/90 backdrop-blur-md border border-emerald-400/70 px-3.5 py-2 rounded-xl shadow-lg flex items-center gap-2.5">
+                    <div class="relative w-7 h-7 flex items-center justify-center">
+                        <svg class="w-7 h-7 -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(16,185,129,0.25)" stroke-width="4"></circle>
+                            <circle id="hold-progress-circle" cx="18" cy="18" r="15" fill="none" stroke="#34d399" stroke-width="4" stroke-dasharray="94.2" stroke-dashoffset="94.2" stroke-linecap="round"></circle>
+                        </svg>
+                        <span class="absolute text-[10px]">✓</span>
+                    </div>
+                    <div class="text-xs">
+                        <div class="font-bold text-emerald-300">ทิศทางตรงแล้ว!</div>
+                        <div class="text-[10px] text-emerald-100/80">ค้างมือไว้สักครู่...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REAL-TIME DIRECTION READOUT CARDS (3 Columns) -->
+            <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                <!-- Velocity v -->
+                <div class="rounded-2xl bg-slate-900/80 border border-cyan-500/30 p-3 flex flex-col justify-between shadow-lg">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] sm:text-xs font-medium text-cyan-300">ความเร็ว (v)</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">นิ้วโป้ง</span>
+                    </div>
+                    <div id="dir-v-text" class="text-sm sm:text-lg font-bold text-white tracking-tight">ขวา →</div>
+                    <div id="dir-v-vec" class="text-[10px] font-mono text-slate-400 mt-0.5">(1.0, 0.0, 0.0)</div>
+                </div>
+
+                <!-- Magnetic Field B -->
+                <div class="rounded-2xl bg-slate-900/80 border border-emerald-500/30 p-3 flex flex-col justify-between shadow-lg">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] sm:text-xs font-medium text-emerald-300">สนามแม่เหล็ก (B)</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">4 นิ้ว</span>
+                    </div>
+                    <div id="dir-b-text" class="text-sm sm:text-lg font-bold text-white tracking-tight">พุ่งเข้าจอ ⊗</div>
+                    <div id="dir-b-vec" class="text-[10px] font-mono text-slate-400 mt-0.5">(0.0, 0.0, -1.0)</div>
+                </div>
+
+                <!-- Magnetic Force F -->
+                <div id="card-dir-f" class="rounded-2xl bg-slate-900/80 border border-red-500/40 p-3 flex flex-col justify-between shadow-lg transition-colors">
+                    <div class="flex items-center justify-between mb-1">
+                        <span id="dir-f-title" class="text-[11px] sm:text-xs font-medium text-red-300">แรงแม่เหล็ก (F)</span>
+                        <span id="dir-f-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">ฝ่ามือ</span>
+                    </div>
+                    <div id="dir-f-text" class="text-sm sm:text-lg font-bold text-white tracking-tight">ขึ้น ↑</div>
+                    <div id="dir-f-vec" class="text-[10px] font-mono text-slate-400 mt-0.5">(0.0, 1.0, 0.0)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT / BOTTOM: CONTROLS & CHALLENGE PANEL (4 cols on desktop) -->
+        <aside class="lg:col-span-4 flex flex-col gap-3.5">
+
+            <!-- CHALLENGE MODE PANEL (Hidden unless active) -->
+            <div id="challenge-panel" class="hidden rounded-2xl bg-gradient-to-b from-amber-950/40 to-slate-900/95 border border-amber-500/50 p-4 shadow-xl">
+                <div class="flex items-center justify-between mb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">🎯</span>
+                        <h2 class="text-sm sm:text-base font-bold text-amber-300">ภารกิจฝึกกฎมือขวา</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="challenge-score" class="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-200 border border-amber-400/30">
+                            0 / 500 คะแนน
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Progress Dots -->
+                <div id="challenge-dots" class="flex items-center gap-1.5 mb-3">
+                    <!-- Generated by JS -->
+                </div>
+
+                <!-- Active Question Content -->
+                <div id="challenge-question-box">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span id="challenge-q-num" class="font-semibold text-amber-200">ข้อที่ 1 / 5</span>
+                        <span id="challenge-q-tag" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px]">ระดับพื้นฐาน</span>
+                    </div>
+                    <p id="challenge-q-text" class="text-xs sm:text-sm text-white leading-relaxed mb-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                        <!-- Question text -->
+                    </p>
+
+                    <!-- Real-time Checklist -->
+                    <div class="grid grid-cols-3 gap-1.5 mb-3 text-[11px]">
+                        <div id="chk-q" class="px-2 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 flex items-center justify-center gap-1 text-slate-400">
+                            <span>○</span><span>ชนิดประจุ</span>
+                        </div>
+                        <div id="chk-v" class="px-2 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 flex items-center justify-center gap-1 text-slate-400">
+                            <span>○</span><span>ทิศ v</span>
+                        </div>
+                        <div id="chk-b" class="px-2 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 flex items-center justify-center gap-1 text-slate-400">
+                            <span>○</span><span>ทิศ B</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Answer Explanation Box (Shown upon solving) -->
+                <div id="challenge-solved-box" class="hidden bg-emerald-950/60 border border-emerald-500/50 rounded-xl p-3 mb-2">
+                    <div class="flex items-center gap-2 text-emerald-300 font-bold text-sm mb-1">
+                        <span>🎉</span>
+                        <span>ถูกต้อง! (+100 คะแนน)</span>
+                    </div>
+                    <p id="challenge-explanation" class="text-xs text-emerald-100/90 leading-relaxed mb-3"></p>
+                    <button id="btn-next-quest" onclick="nextChallenge()"
+                        class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition shadow-md">
+                        ไปข้อถัดไป →
+                    </button>
+                </div>
+
+                <!-- Final Summary Box -->
+                <div id="challenge-complete-box" class="hidden text-center py-2">
+                    <div class="text-3xl mb-1">🏆</div>
+                    <h3 class="text-base font-bold text-amber-300 mb-1">พิชิตครบทั้ง 5 ภารกิจแล้ว!</h3>
+                    <p class="text-xs text-slate-300 mb-3">คุณเข้าใจการใช้กฎมือขวาหาทิศแรงแม่เหล็กทั้งประจุบวกและประจุลบอย่างยอดเยี่ยม</p>
+                    <button onclick="resetChallenges()"
+                        class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition">
+                        เล่นภารกิจใหม่อีกครั้ง
+                    </button>
+                </div>
+            </div>
+
+            <!-- CHARGE TYPE SELECTOR CARD -->
+            <div class="rounded-2xl bg-slate-900/80 border border-slate-700/70 p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-2.5">
+                    <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                        <span>⚡</span>
+                        <span>ชนิดของอนุภาคที่มีประจุ (q)</span>
+                    </h2>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <button id="btn-charge-pos" onclick="setCharge(1)"
+                        class="p-3 rounded-xl border-2 border-red-500 bg-red-500/15 text-left transition-all active:scale-95">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-mono font-bold text-base text-red-400">+q</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-200">โปรตอน</span>
+                        </div>
+                        <div class="text-[11px] text-slate-300 leading-snug">แรงพุ่งออกจาก<strong class="text-red-300">ฝ่ามือ</strong></div>
+                    </button>
+
+                    <button id="btn-charge-neg" onclick="setCharge(-1)"
+                        class="p-3 rounded-xl border-2 border-slate-700/80 bg-slate-950/60 hover:border-orange-500/50 text-left transition-all active:scale-95">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-mono font-bold text-base text-orange-400">-q</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-200">อิเล็กตรอน</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 leading-snug">แรงพุ่งออกจาก<strong class="text-orange-300">หลังมือ</strong></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3D MODE CONTROLS CARD -->
+            <div id="controls-3d-card" class="rounded-2xl bg-slate-900/80 border border-slate-700/70 p-4 shadow-lg flex flex-col gap-3.5">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                        <span>🎛️</span>
+                        <span>ควบคุมมือขวา 3 มิติ</span>
+                    </h2>
+                    <button onclick="applyPreset('b_in')" class="text-[11px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2">
+                        รีเซ็ตมุมมอง
+                    </button>
+                </div>
+
+                <!-- Quick Presets -->
+                <div>
+                    <div class="text-[11px] text-slate-400 mb-2">ตั้งค่าทิศทางด่วน (Presets):</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="applyPreset('b_in')" class="px-2.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium transition active:scale-95">
+                            B พุ่งเข้าจอ ⊗
+                        </button>
+                        <button onclick="applyPreset('b_out')" class="px-2.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium transition active:scale-95">
+                            B พุ่งออกจอ ⊙
+                        </button>
+                        <button onclick="applyPreset('b_right')" class="px-2.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium transition active:scale-95">
+                            B ไปทางขวา →
+                        </button>
+                        <button onclick="applyPreset('b_up')" class="px-2.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium transition active:scale-95">
+                            B ชี้ขึ้น ↑
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Rotation Sliders -->
+                <div class="space-y-2.5 pt-1 border-t border-slate-800">
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-slate-300">หมุนแกน X (ก้ม-เงย)</span>
+                            <span id="val-rot-x" class="font-mono text-cyan-300">-90°</span>
+                        </div>
+                        <input id="slider-rot-x" type="range" min="-180" max="180" value="-90" class="w-full" oninput="onSliderRotate()">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-slate-300">หมุนแกน Y (หันซ้าย-ขวา)</span>
+                            <span id="val-rot-y" class="font-mono text-cyan-300">0°</span>
+                        </div>
+                        <input id="slider-rot-y" type="range" min="-180" max="180" value="0" class="w-full" oninput="onSliderRotate()">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                            <span class="text-slate-300">หมุนแกน Z (เอียงข้อมือ)</span>
+                            <span id="val-rot-z" class="font-mono text-cyan-300">0°</span>
+                        </div>
+                        <input id="slider-rot-z" type="range" min="-180" max="180" value="0" class="w-full" oninput="onSliderRotate()">
+                    </div>
+                </div>
+
+                <!-- Visual Toggles -->
+                <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+                    <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+                        <input id="chk-particle-sim" type="checkbox" checked onchange="toggleParticleSim(this.checked)"
+                            class="w-4 h-4 rounded accent-cyan-400 cursor-pointer">
+                        <span>แสดงเส้นทางโค้งของอนุภาค</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+                        <input id="chk-bfield-lines" type="checkbox" checked onchange="toggleBFieldLines(this.checked)"
+                            class="w-4 h-4 rounded accent-emerald-400 cursor-pointer">
+                        <span>เส้นสนาม B</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- AR MODE CONTROLS CARD (Hidden when in 3D mode) -->
+            <div id="controls-ar-card" class="hidden rounded-2xl bg-slate-900/80 border border-slate-700/70 p-4 shadow-lg flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                        <span>📷</span>
+                        <span>ควบคุมกล้อง AR จับมือ</span>
+                    </h2>
+                    <span id="ar-status-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                        ยังไม่เปิดกล้อง
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btn-ar-toggle-cam" onclick="toggleARCamera()"
+                        class="px-3 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition active:scale-95">
+                        เปิดกล้อง AR
+                    </button>
+                    <button onclick="toggleHandednessInvert()"
+                        class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition active:scale-95">
+                        สลับการตรวจซ้าย/ขวา
+                    </button>
+                </div>
+
+                <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 text-[11px] text-slate-300 space-y-1.5 leading-relaxed">
+                    <div class="font-semibold text-cyan-300">💡 เคล็ดลับการจับมือให้แม่นยำ:</div>
+                    <p>• แบ<strong class="text-white">มือขวา</strong>ให้เห็นฝ่ามือหรือหลังมือชัดเจน นิ้วทั้ง 4 เหยียดตรงชิดกัน และกางนิ้วหัวแม่มือออกตั้งฉาก</p>
+                    <p>• สัญลักษณ์ <span class="font-mono text-white bg-slate-800 px-1 rounded">⊗</span> = พุ่งเข้าจอ, <span class="font-mono text-white bg-slate-800 px-1 rounded">⊙</span> = พุ่งออกจอ</p>
+                </div>
+            </div>
+
+            <!-- QUICK PHYSICS SUMMARY -->
+            <div class="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-3.5 text-[11px] text-slate-400 leading-relaxed">
+                <div class="font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+                    <span>📘</span>
+                    <span>หลักการกฎมือขวาแบบแบมือ (สสวท.)</span>
+                </div>
+                <p>
+                    เมื่ออนุภาคมีประจุ <span class="font-mono text-slate-200">q</span> เคลื่อนที่ด้วยความเร็ว <span class="text-cyan-300 font-semibold">v</span> ตัดผ่านสนามแม่เหล็ก <span class="text-emerald-300 font-semibold">B</span> จะเกิดแรงแม่เหล็ก <span class="text-red-300 font-semibold">F</span> ตั้งฉากกับทั้ง <span class="font-mono">v</span> และ <span class="font-mono">B</span> เสมอ ทำให้ประจุเคลื่อนที่เบี่ยงเบนเป็นแนวโค้งวงกลม
+                </p>
+            </div>
+        </aside>
+    </main>
+
+    <!-- ==================== SCRIPT ==================== -->
+    <script>
+        /* =========================================================================
+         * 1. GLOBAL APPLICATION STATE
+         * ========================================================================= */
+        const APP = {
+            mode: '3d', // '3d' | 'ar'
+            charge: 1,  // +1 (proton) | -1 (electron)
+            // Current live unit vectors in screen-aligned Right-Handed coordinates:
+            // +X: Right, +Y: Up, +Z: Out of screen (⊙), -Z: Into screen (⊗)
+            vecV: new THREE.Vector3(1, 0, 0),
+            vecB: new THREE.Vector3(0, 0, -1),
+            vecF: new THREE.Vector3(0, 1, 0),
+
+            // 3D Mode flags
+            showParticleSim: true,
+            showBFieldLines: true,
+
+            // AR Mode state
+            arActive: false,
+            arHandsInstance: null,
+            arCameraInstance: null,
+            arStream: null,
+            arInvertHandedness: false,
+            arSmoothedV: new THREE.Vector3(1, 0, 0),
+            arSmoothedB: new THREE.Vector3(0, 1, 0),
+            arSmoothedF: new THREE.Vector3(0, 0, 1),
+            arHasHand: false,
+
+            // Challenge Mode state
+            challengeActive: false,
+            challengeIndex: 0,
+            challengeScore: 0,
+            challengeSolvedCurrent: false,
+            challengeHoldTime: 0,
+            challengeRequiredHold: 0.75, // seconds to hold pose
+            challengeCompletedAll: false
+        };
+
+        /* =========================================================================
+         * 2. CHALLENGE QUESTIONS (5 PHYSICS QUESTS)
+         * ========================================================================= */
+        const CHALLENGES = [
+            {
+                id: 1,
+                tag: 'ระดับพื้นฐาน • ประจุบวก',
+                text: 'โปรตอน (+q) เคลื่อนที่ไปทาง ขวา (→) เข้าสู่บริเวณที่มีสนามแม่เหล็ก พุ่งเข้าจอ (⊗) จงหมุนมือขวาให้ตรงกับโจทย์เพื่อหาทิศของแรงแม่เหล็ก F',
+                q: 1,
+                v: new THREE.Vector3(1, 0, 0),
+                B: new THREE.Vector3(0, 0, -1),
+                explanation: 'นิ้วหัวแม่มือ (v) ชี้ไปทางขวา, นิ้วทั้งสี่ (B) พุ่งเข้าจอ ฝ่ามือจะหงายขึ้นด้านบน แรงแม่เหล็กต่อประจุบวก (+q) จึงมีทิศ ขึ้นด้านบน (↑)'
+            },
+            {
+                id: 2,
+                tag: 'สนามแม่เหล็กพุ่งออกจอ',
+                text: 'โปรตอน (+q) เคลื่อนที่ ขึ้นด้านบน (↑) ผ่านสนามแม่เหล็กที่มีทิศ พุ่งออกจอ (⊙) จงจัดมือขวาให้ถูกต้อง',
+                q: 1,
+                v: new THREE.Vector3(0, 1, 0),
+                B: new THREE.Vector3(0, 0, 1),
+                explanation: 'นิ้วหัวแม่มือ (v) ชี้ขึ้นด้านบน, นิ้วทั้งสี่ (B) ชี้พุ่งออกจากหน้าจอ ฝ่ามือจะหันไปทางขวา แรงแม่เหล็กต่อประจุบวกจึงมีทิศไปทาง ขวา (→)'
+            },
+            {
+                id: 3,
+                tag: 'ระวังประจุลบ! (-q)',
+                text: 'อิเล็กตรอน (-q) เคลื่อนที่ไปทาง ขวา (→) เข้าสู่สนามแม่เหล็กที่ พุ่งเข้าจอ (⊗) อย่าลืมสลับชนิดประจุเป็นอิเล็กตรอนและจัดมือขวา!',
+                q: -1,
+                v: new THREE.Vector3(1, 0, 0),
+                B: new THREE.Vector3(0, 0, -1),
+                explanation: 'จัดมือขวาเหมือนข้อ 1 (v ขวา, B พุ่งเข้าจอ) ฝ่ามือหงายขึ้น แต่เพราะเป็นประจุลบ (-q) แรงแม่เหล็กจะพุ่งออกจากหลังมือ จึงมีทิศ ลงด้านล่าง (↓)'
+            },
+            {
+                id: 4,
+                tag: 'แรงแม่เหล็กพุ่งเข้าจอ',
+                text: 'โปรตอน (+q) เคลื่อนที่ ขึ้นด้านบน (↑) ในสนามแม่เหล็กที่มีทิศไปทาง ขวา (→) จงตั้งค่าและหมุนมือขวาหาทิศแรงแม่เหล็ก',
+                q: 1,
+                v: new THREE.Vector3(0, 1, 0),
+                B: new THREE.Vector3(1, 0, 0),
+                explanation: 'นิ้วหัวแม่มือ (v) ชี้ขึ้น, นิ้วทั้งสี่ (B) ชี้ไปทางขวา ฝ่ามือจะหันเข้าหาหน้าจอ แรงแม่เหล็กต่อประจุบวกจึงมีทิศ พุ่งเข้าจอ (⊗)'
+            },
+            {
+                id: 5,
+                tag: 'ระดับท้าทาย • อิเล็กตรอน',
+                text: 'อิเล็กตรอน (-q) เคลื่อนที่ไปทาง ซ้าย (←) ผ่านสนามแม่เหล็กที่มีทิศ ลงด้านล่าง (↓) จงเลือกชนิดประจุและหมุนมือขวาให้ถูกต้อง',
+                q: -1,
+                v: new THREE.Vector3(-1, 0, 0),
+                B: new THREE.Vector3(0, -1, 0),
+                explanation: 'นิ้วหัวแม่มือ (v) ชี้ซ้าย, นิ้วทั้งสี่ (B) ชี้ลง ฝ่ามือจะหันออกนอกจอ (⊙) แต่เนื่องจากเป็นอิเล็กตรอน (-q) แรงจึงพุ่งออกจากหลังมือในทิศ พุ่งเข้าจอ (⊗)'
+            }
+        ];
+
+        /* =========================================================================
+         * 3. SOUND SYNTHESIS (WEB AUDIO API - NO EXTERNAL URLS)
+         * ========================================================================= */
+        let audioCtx = null;
+        function playSound(type) {
+            try {
+                if (!audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+                    audioCtx = new AudioContext();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                if (type === 'success') {
+                    // Pleasant ascending chord
+                    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                        gain.gain.setValueAtTime(0.001, now + i * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.12, now + i * 0.08 + 0.03);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + i * 0.08);
+                        osc.stop(now + i * 0.08 + 0.38);
+                    });
+                } else if (type === 'click') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(300, now + 0.06);
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.07);
+                }
+            } catch (e) {
+                // Ignore audio errors gracefully
+            }
+        }
+
+        /* =========================================================================
+         * 4. PHYSICS VECTOR CLASSIFIER (THAI DIRECTIONS)
+         * ========================================================================= */
+        function describeVectorThai(vec) {
+            const ax = Math.abs(vec.x);
+            const ay = Math.abs(vec.y);
+            const az = Math.abs(vec.z);
+
+            // Check if aligned strongly with one cardinal axis
+            const maxVal = Math.max(ax, ay, az);
+            if (maxVal < 0.01) return 'ไม่มีทิศ (0)';
+
+            if (maxVal >= 0.72) {
+                if (ax === maxVal) return vec.x > 0 ? 'ขวา →' : 'ซ้าย ←';
+                if (ay === maxVal) return vec.y > 0 ? 'ขึ้น ↑' : 'ลง ↓';
+                if (az === maxVal) return vec.z > 0 ? 'พุ่งออกจอ ⊙' : 'พุ่งเข้าจอ ⊗';
+            }
+
+            // Combined diagonal description
+            const parts = [];
+            if (ax > 0.38) parts.push(vec.x > 0 ? 'ขวา' : 'ซ้าย');
+            if (ay > 0.38) parts.push(vec.y > 0 ? 'ขึ้น' : 'ลง');
+            if (az > 0.38) parts.push(vec.z > 0 ? 'ออกจอ ⊙' : 'เข้าจอ ⊗');
+            return 'เฉียง' + parts.join('-');
+        }
+
+        function formatVecTuple(v) {
+            return `(${v.x.toFixed(1)}, ${v.y.toFixed(1)}, ${v.z.toFixed(1)})`;
+        }
+
+        function updateDirectionHUD() {
+            document.getElementById('dir-v-text').textContent = describeVectorThai(APP.vecV);
+            document.getElementById('dir-v-vec').textContent = formatVecTuple(APP.vecV);
+
+            document.getElementById('dir-b-text').textContent = describeVectorThai(APP.vecB);
+            document.getElementById('dir-b-vec').textContent = formatVecTuple(APP.vecB);
+
+            document.getElementById('dir-f-text').textContent = describeVectorThai(APP.vecF);
+            document.getElementById('dir-f-vec').textContent = formatVecTuple(APP.vecF);
+        }
+
+        /* =========================================================================
+         * 5. THREE.JS 3D INTERACTIVE HAND SCENE
+         * ========================================================================= */
+        let scene, camera, renderer;
+        let handRoot; // Rotated by user
+        let arrowV, arrowB, arrowF;
+        let palmEmitter, backEmitter;
+        let bFieldGroup;
+        let particleGroup, particleMesh, particleTrailLine;
+        let particlePhase = 0;
+
+        // Drag rotation variables
+        let isDragging3D = false;
+        let prevPointer = { x: 0, y: 0 };
+
+        // Reusable arrow builder
+        function createVectorArrow(colorHex, length, shaftRadius, headLength, headRadius) {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                emissive: colorHex,
+                emissiveIntensity: 0.45,
+                roughness: 0.3,
+                metalness: 0.2
+            });
+
+            const shaftLen = length - headLength;
+            const shaftGeo = new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLen, 16);
+            const shaft = new THREE.Mesh(shaftGeo, mat);
+            shaft.position.y = shaftLen / 2;
+            group.add(shaft);
+
+            const headGeo = new THREE.ConeGeometry(headRadius, headLength, 20);
+            const head = new THREE.Mesh(headGeo, mat);
+            head.position.y = shaftLen + headLength / 2;
+            group.add(head);
+
+            group.userData = { mat, length };
+            return group;
+        }
+
+        // Build anatomically recognizable Right Hand in local frame:
+        // +X = Thumb (v), +Y = Four Fingers (B), +Z = Palm normal (+q F), -Z = Back of hand (-q F)
+        function buildRightHandMesh() {
+            const group = new THREE.Group();
+
+            // Materials
+            const skinPalmMat = new THREE.MeshStandardMaterial({
+                color: 0xf1c29b,
+                roughness: 0.55,
+                metalness: 0.05
+            });
+            const skinBackMat = new THREE.MeshStandardMaterial({
+                color: 0xd99e73,
+                roughness: 0.6,
+                metalness: 0.05
+            });
+            const nailMat = new THREE.MeshStandardMaterial({
+                color: 0xffebe0,
+                roughness: 0.25,
+                metalness: 0.1
+            });
+            const cuffMat = new THREE.MeshStandardMaterial({
+                color: 0x1e293b,
+                emissive: 0x0ea5e9,
+                emissiveIntensity: 0.2,
+                roughness: 0.35,
+                metalness: 0.7
+            });
+
+            // 1. Palm Core (Split front/back subtly so palm vs back is immediately obvious)
+            const palmFront = new THREE.Mesh(new THREE.BoxGeometry(1.55, 1.65, 0.24), skinPalmMat);
+            palmFront.position.set(0, 0, 0.11);
+            group.add(palmFront);
+
+            const palmBack = new THREE.Mesh(new THREE.BoxGeometry(1.52, 1.62, 0.22), skinBackMat);
+            palmBack.position.set(0, 0, -0.11);
+            group.add(palmBack);
+
+            // Rounded side edges of palm
+            const sideGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.62, 14);
+            const leftEdge = new THREE.Mesh(sideGeo, skinBackMat);
+            leftEdge.position.set(-0.76, 0, 0);
+            group.add(leftEdge);
+            const rightEdge = new THREE.Mesh(sideGeo, skinPalmMat);
+            rightEdge.position.set(0.76, 0, 0);
+            group.add(rightEdge);
+
+            // Glowing Palm Emitter Pad (+Z = Palm side)
+            const palmPadGeo = new THREE.CylinderGeometry(0.32, 0.36, 0.06, 24);
+            const palmPadMat = new THREE.MeshStandardMaterial({
+                color: 0xef4444,
+                emissive: 0xef4444,
+                emissiveIntensity: 0.7
+            });
+            palmEmitter = new THREE.Mesh(palmPadGeo, palmPadMat);
+            palmEmitter.rotation.x = Math.PI / 2;
+            palmEmitter.position.set(0, 0.05, 0.24);
+            group.add(palmEmitter);
+
+            // Back of Hand Emitter Pad (-Z = Back side)
+            const backPadMat = new THREE.MeshStandardMaterial({
+                color: 0xf97316,
+                emissive: 0xf97316,
+                emissiveIntensity: 0.2
+            });
+            backEmitter = new THREE.Mesh(palmPadGeo, backPadMat);
+            backEmitter.rotation.x = Math.PI / 2;
+            backEmitter.position.set(0, 0.05, -0.24);
+            group.add(backEmitter);
+
+            // Subtle Palm Crease Line (on +Z)
+            const creaseMat = new THREE.MeshBasicMaterial({ color: 0xb0724c });
+            const crease = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.04, 0.02), creaseMat);
+            crease.position.set(0.05, 0.25, 0.235);
+            crease.rotation.z = -0.15;
+            group.add(crease);
+
+            // 2. Wrist & Sci-Fi Cuff (bottom -Y)
+            const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.62, 0.75, 20), cuffMat);
+            wrist.position.set(-0.05, -1.15, 0);
+            group.add(wrist);
+
+            const cuffRing = new THREE.Mesh(
+                new THREE.TorusGeometry(0.58, 0.04, 12, 28),
+                new THREE.MeshBasicMaterial({ color: 0x22d3ee })
+            );
+            cuffRing.rotation.x = Math.PI / 2;
+            cuffRing.position.set(-0.05, -0.85, 0);
+            group.add(cuffRing);
+
+            // 3. Four Straight Fingers pointing along +Y
+            // Arranged from +X (Index, near thumb) to -X (Pinky)
+            const fingerConfigs = [
+                { x: 0.56, len: 1.55, r: 0.165 }, // Index (ชี้)
+                { x: 0.19, len: 1.72, r: 0.17 },  // Middle (กลาง)
+                { x: -0.19, len: 1.58, r: 0.16 }, // Ring (นาง)
+                { x: -0.56, len: 1.28, r: 0.14 }  // Pinky (ก้อย)
+            ];
+
+            fingerConfigs.forEach(cfg => {
+                // Knuckle bump on back (-Z)
+                const knuckle = new THREE.Mesh(new THREE.SphereGeometry(cfg.r * 1.05, 14, 14), skinBackMat);
+                knuckle.position.set(cfg.x, 0.82, -0.05);
+                group.add(knuckle);
+
+                // Finger shaft
+                const shaft = new THREE.Mesh(new THREE.CylinderGeometry(cfg.r * 0.88, cfg.r, cfg.len, 16), skinPalmMat);
+                shaft.position.set(cfg.x, 0.82 + cfg.len / 2, 0);
+                group.add(shaft);
+
+                // Rounded fingertip
+                const tip = new THREE.Mesh(new THREE.SphereGeometry(cfg.r * 0.88, 14, 14), skinPalmMat);
+                tip.position.set(cfg.x, 0.82 + cfg.len, 0);
+                group.add(tip);
+
+                // Fingernail on BACK (-Z) side so orientation is 100% unmistakable
+                const nail = new THREE.Mesh(new THREE.BoxGeometry(cfg.r * 1.15, cfg.r * 1.45, 0.05), nailMat);
+                nail.position.set(cfg.x, 0.82 + cfg.len - cfg.r * 0.65, -cfg.r * 0.86);
+                group.add(nail);
+            });
+
+            // 4. Thumb extending along +X (perpendicular to the 4 fingers)
+            // Base muscle (thenar) on palm side
+            const thumbBase = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), skinPalmMat);
+            thumbBase.position.set(0.68, -0.35, 0.1);
+            group.add(thumbBase);
+
+            // Thumb shaft along +X
+            const thumbLen = 1.25;
+            const thumbShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.21, thumbLen, 16), skinPalmMat);
+            thumbShaft.rotation.z = -Math.PI / 2;
+            thumbShaft.position.set(0.75 + thumbLen / 2, -0.25, 0.04);
+            group.add(thumbShaft);
+
+            // Thumb tip
+            const thumbTip = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 14), skinPalmMat);
+            thumbTip.position.set(0.75 + thumbLen, -0.25, 0.04);
+            group.add(thumbTip);
+
+            // Thumbnail on back/top side of thumb
+            const thumbNail = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.05), nailMat);
+            thumbNail.position.set(0.75 + thumbLen - 0.12, -0.25, -0.12);
+            group.add(thumbNail);
+
+            return group;
+        }
+
+        function initThreeJS() {
+            const container = document.getElementById('mode-3d-container');
+            const w = container.clientWidth || 600;
+            const h = container.clientHeight || 420;
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 100);
+            camera.position.set(0, 0.4, 9.2);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(w, h);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.insertBefore(renderer.domElement, container.firstChild);
+
+            // Lighting
+            const ambient = new THREE.AmbientLight(0xdbeafe, 0.75);
+            scene.add(ambient);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.05);
+            keyLight.position.set(5, 8, 9);
+            scene.add(keyLight);
+
+            const rimCyan = new THREE.PointLight(0x22d3ee, 0.85, 25);
+            rimCyan.position.set(-6, 3, -4);
+            scene.add(rimCyan);
+
+            const rimEmerald = new THREE.PointLight(0x10b981, 0.65, 25);
+            rimEmerald.position.set(6, -4, -3);
+            scene.add(rimEmerald);
+
+            // Hand Root Group
+            handRoot = new THREE.Group();
+            scene.add(handRoot);
+
+            const handMesh = buildRightHandMesh();
+            handMesh.scale.setScalar(0.88);
+            handRoot.add(handMesh);
+
+            // Attach 3D Vector Arrows to handRoot
+            // v: +X (Cyan)
+            arrowV = createVectorArrow(0x22d3ee, 3.1, 0.085, 0.48, 0.22);
+            arrowV.rotation.z = -Math.PI / 2; // Point +X
+            arrowV.position.set(0, -0.22, 0.05);
+            handRoot.add(arrowV);
+
+            // B: +Y (Emerald)
+            arrowB = createVectorArrow(0x34d399, 3.4, 0.085, 0.48, 0.22);
+            arrowB.position.set(0, 0, 0);
+            handRoot.add(arrowB);
+
+            // F: +Z for +q, -Z for -q (Red / Orange)
+            arrowF = createVectorArrow(0xf87171, 3.0, 0.095, 0.52, 0.24);
+            arrowF.rotation.x = Math.PI / 2; // Point +Z
+            arrowF.position.set(0, 0.05, 0);
+            handRoot.add(arrowF);
+
+            // Background Magnetic Field Lines (aligned with current B in world space)
+            bFieldGroup = new THREE.Group();
+            const bLineMat = new THREE.MeshBasicMaterial({
+                color: 0x10b981,
+                transparent: true,
+                opacity: 0.22
+            });
+            const offsets = [
+                [-3.2, -2.2], [3.2, -2.2], [-3.2, 2.2], [3.2, 2.2],
+                [0, -2.8], [0, 2.8]
+            ];
+            offsets.forEach(([ox, oz]) => {
+                const line = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 7.5, 8), bLineMat);
+                line.position.set(ox, 0, oz);
+                bFieldGroup.add(line);
+
+                const cone = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.35, 10), bLineMat);
+                cone.position.set(ox, 3.75, oz);
+                bFieldGroup.add(cone);
+            });
+            scene.add(bFieldGroup);
+
+            // Charged Particle Deflection Simulation
+            particleGroup = new THREE.Group();
+            scene.add(particleGroup);
+
+            const pGeo = new THREE.SphereGeometry(0.24, 24, 24);
+            const pMat = new THREE.MeshStandardMaterial({
+                color: 0xf87171,
+                emissive: 0xef4444,
+                emissiveIntensity: 0.9,
+                roughness: 0.2
+            });
+            particleMesh = new THREE.Mesh(pGeo, pMat);
+            particleGroup.add(particleMesh);
+
+            // Glowing Trajectory Arc Line
+            const trailGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(40 * 3);
+            trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const trailMat = new THREE.LineBasicMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.75
+            });
+            particleTrailLine = new THREE.Line(trailGeo, trailMat);
+            particleGroup.add(particleTrailLine);
+
+            // Setup Mouse & Touch Drag Controls
+            setup3DDragControls(container);
+
+            // Start with classic textbook preset: B into screen (⊗), v right (→), F up (↑)
+            applyPreset('b_in');
+        }
+
+        function setup3DDragControls(el) {
+            const onStart = (x, y) => {
+                isDragging3D = true;
+                prevPointer = { x, y };
+            };
+            const onMove = (x, y) => {
+                if (!isDragging3D || APP.mode !== '3d') return;
+                const dx = x - prevPointer.x;
+                const dy = y - prevPointer.y;
+                prevPointer = { x, y };
+
+                // World-space trackball rotation (smooth & intuitive 360°)
+                const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx * 0.0085);
+                const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * 0.0085);
+                handRoot.quaternion.premultiply(qY);
+                handRoot.quaternion.premultiply(qX);
+                handRoot.quaternion.normalize();
+
+                syncSlidersFromQuaternion();
+                updateVectorsFrom3DHand();
+            };
+            const onEnd = () => { isDragging3D = false; };
+
+            el.addEventListener('mousedown', e => onStart(e.clientX, e.clientY));
+            window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+            window.addEventListener('mouseup', onEnd);
+
+            el.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    onStart(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+            el.addEventListener('touchmove', e => {
+                if (isDragging3D && e.touches.length === 1) {
+                    e.preventDefault();
+                    onMove(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: false });
+            window.addEventListener('touchend', onEnd);
+        }
+
+        function syncSlidersFromQuaternion() {
+            const euler = new THREE.Euler().setFromQuaternion(handRoot.quaternion, 'XYZ');
+            const rx = Math.round(THREE.MathUtils.radToDeg(euler.x));
+            const ry = Math.round(THREE.MathUtils.radToDeg(euler.y));
+            const rz = Math.round(THREE.MathUtils.radToDeg(euler.z));
+
+            document.getElementById('slider-rot-x').value = rx;
+            document.getElementById('slider-rot-y').value = ry;
+            document.getElementById('slider-rot-z').value = rz;
+            document.getElementById('val-rot-x').textContent = rx + '°';
+            document.getElementById('val-rot-y').textContent = ry + '°';
+            document.getElementById('val-rot-z').textContent = rz + '°';
+        }
+
+        function onSliderRotate() {
+            const rx = parseFloat(document.getElementById('slider-rot-x').value);
+            const ry = parseFloat(document.getElementById('slider-rot-y').value);
+            const rz = parseFloat(document.getElementById('slider-rot-z').value);
+
+            document.getElementById('val-rot-x').textContent = rx + '°';
+            document.getElementById('val-rot-y').textContent = ry + '°';
+            document.getElementById('val-rot-z').textContent = rz + '°';
+
+            const euler = new THREE.Euler(
+                THREE.MathUtils.degToRad(rx),
+                THREE.MathUtils.degToRad(ry),
+                THREE.MathUtils.degToRad(rz),
+                'XYZ'
+            );
+            handRoot.quaternion.setFromEuler(euler);
+            updateVectorsFrom3DHand();
+        }
+
+        function applyPreset(name) {
+            playSound('click');
+            if (!handRoot) return;
+
+            if (name === 'b_in') {
+                // v: +X (Right), B: -Z (Into screen), F(+q): +Y (Up)
+                handRoot.quaternion.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0, 'XYZ'));
+            } else if (name === 'b_out') {
+                // v: +X (Right), B: +Z (Out of screen), F(+q): -Y (Down)
+                handRoot.quaternion.setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0, 'XYZ'));
+            } else if (name === 'b_right') {
+                // v: +Y (Up), B: +X (Right), F(+q): -Z (Into screen)
+                const qZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+                const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+                handRoot.quaternion.copy(qY).multiply(qZ);
+            } else if (name === 'b_up') {
+                // v: +X (Right), B: +Y (Up), F(+q): +Z (Out of screen)
+                handRoot.quaternion.identity();
+            }
+
+            syncSlidersFromQuaternion();
+            updateVectorsFrom3DHand();
+        }
+
+        function updateVectorsFrom3DHand() {
+            if (!handRoot) return;
+            APP.vecV.set(1, 0, 0).applyQuaternion(handRoot.quaternion).normalize();
+            APP.vecB.set(0, 1, 0).applyQuaternion(handRoot.quaternion).normalize();
+            APP.vecF.copy(APP.vecV).cross(APP.vecB).multiplyScalar(APP.charge).normalize();
+
+            // Align background B-field lines with world B vector
+            if (bFieldGroup) {
+                const qB = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), APP.vecB);
+                bFieldGroup.quaternion.copy(qB);
+            }
+            updateDirectionHUD();
+        }
+
+        function update3DChargeAppearance() {
+            if (!arrowF || !palmEmitter || !backEmitter) return;
+            const isPos = APP.charge > 0;
+            const fColor = isPos ? 0xf87171 : 0xf97316;
+
+            arrowF.userData.mat.color.setHex(fColor);
+            arrowF.userData.mat.emissive.setHex(fColor);
+            // Flip F arrow direction: +Z for +q (out of palm), -Z for -q (out of back)
+            arrowF.rotation.x = isPos ? Math.PI / 2 : -Math.PI / 2;
+
+            palmEmitter.material.emissiveIntensity = isPos ? 0.85 : 0.1;
+            backEmitter.material.emissiveIntensity = isPos ? 0.1 : 0.85;
+
+            if (particleMesh) {
+                particleMesh.material.color.setHex(fColor);
+                particleMesh.material.emissive.setHex(fColor);
+            }
+            if (particleTrailLine) {
+                particleTrailLine.material.color.setHex(isPos ? 0x38bdf8 : 0xc084fc);
+            }
+        }
+
+        function update3DLabels() {
+            if (APP.mode !== '3d' || !renderer || !handRoot) return;
+            const container = document.getElementById('mode-3d-container');
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+
+            const projectPoint = (localPos, elId, text) => {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                const worldPos = localPos.clone().applyMatrix4(handRoot.matrixWorld);
+                worldPos.project(camera);
+
+                const x = (worldPos.x * 0.5 + 0.5) * w;
+                const y = (-worldPos.y * 0.5 + 0.5) * h;
+
+                el.style.left = `${Math.max(40, Math.min(w - 40, x))}px`;
+                el.style.top = `${Math.max(24, Math.min(h - 24, y))}px`;
+                el.textContent = text;
+            };
+
+            const fDirSign = APP.charge > 0 ? 1 : -1;
+            projectPoint(new THREE.Vector3(3.35, -0.22, 0.05), 'label-v', 'v');
+            projectPoint(new THREE.Vector3(0, 3.65, 0), 'label-b', 'B');
+            projectPoint(new THREE.Vector3(0, 0.05, 3.3 * fDirSign), 'label-f', APP.charge > 0 ? 'F (+q)' : 'F (-q)');
+        }
+
+        function updateParticleSimulation(dt) {
+            if (!particleGroup || !APP.showParticleSim) return;
+            particlePhase = (particlePhase + dt * 0.55) % 1.0;
+
+            // Circular arc deflection in the plane spanned by vecV and vecF
+            // Start behind hand along -v, enter at origin, curve toward +F
+            const R = 2.6;
+            const maxAngle = Math.PI * 0.62;
+            const posAttr = particleTrailLine.geometry.attributes.position;
+            const totalPts = 40;
+
+            const originShift = APP.vecV.clone().multiplyScalar(-1.6);
+
+            for (let i = 0; i < totalPts; i++) {
+                const t = i / (totalPts - 1);
+                const theta = t * maxAngle;
+                // Position on circle starting with tangent = vecV and curving toward vecF
+                const alongV = Math.sin(theta) * R;
+                const alongF = (1 - Math.cos(theta)) * R;
+
+                const pt = originShift.clone()
+                    .addScaledVector(APP.vecV, alongV)
+                    .addScaledVector(APP.vecF, alongF);
+
+                posAttr.setXYZ(i, pt.x, pt.y, pt.z);
+            }
+            posAttr.needsUpdate = true;
+
+            // Animate particle sphere along the exact same arc
+            const curTheta = particlePhase * maxAngle;
+            const pPos = originShift.clone()
+                .addScaledVector(APP.vecV, Math.sin(curTheta) * R)
+                .addScaledVector(APP.vecF, (1 - Math.cos(curTheta)) * R);
+            particleMesh.position.copy(pPos);
+        }
+
+        function toggleParticleSim(checked) {
+            APP.showParticleSim = checked;
+            if (particleGroup) particleGroup.visible = checked;
+        }
+
+        function toggleBFieldLines(checked) {
+            APP.showBFieldLines = checked;
+            if (bFieldGroup) bFieldGroup.visible = checked;
+        }
+
+        /* =========================================================================
+         * 6. AR HAND TRACKING MODE (MEDIAPIPE HANDS)
+         * ========================================================================= */
+        async function startARCamera() {
+            const placeholder = document.getElementById('ar-placeholder');
+            const loadingText = document.getElementById('ar-loading-text');
+            const errorBox = document.getElementById('ar-error-box');
+            const statusBadge = document.getElementById('ar-status-badge');
+            const toggleBtn = document.getElementById('btn-ar-toggle-cam');
+
+            errorBox.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้องเว็บแคม หรือไม่ได้เปิดผ่าน HTTPS');
+                }
+                if (typeof Hands === 'undefined') {
+                    throw new Error('ไม่สามารถโหลดไลบรารี MediaPipe Hands ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+                }
+
+                const videoEl = document.getElementById('ar-video');
+
+                // Request webcam stream
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+
+                APP.arStream = stream;
+                videoEl.srcObject = stream;
+                await videoEl.play();
+
+                // Initialize MediaPipe Hands once
+                if (!APP.arHandsInstance) {
+                    APP.arHandsInstance = new Hands({
+                        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                    });
+                    APP.arHandsInstance.setOptions({
+                        maxNumHands: 1,
+                        modelComplexity: 1,
+                        minDetectionConfidence: 0.65,
+                        minTrackingConfidence: 0.6,
+                        selfieMode: true // Automatically mirrors image & aligns Right/Left labels
+                    });
+                    APP.arHandsInstance.onResults(onARHandResults);
+                }
+
+                APP.arActive = true;
+                placeholder.classList.add('hidden');
+                loadingText.classList.add('hidden');
+
+                statusBadge.textContent = 'กำลังทำงาน';
+                statusBadge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                toggleBtn.textContent = 'ปิดกล้อง AR';
+                toggleBtn.className = 'px-3 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 font-bold text-xs transition active:scale-95';
+
+                // Start frame loop
+                processARFrame();
+
+            } catch (err) {
+                console.error('AR Camera Error:', err);
+                loadingText.classList.add('hidden');
+                let msg = 'ไม่สามารถเข้าถึงกล้องได้ กรุณาตรวจสอบสิทธิ์การใช้งานกล้องในเบราว์เซอร์';
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    msg = 'คุณยังไม่ได้อนุญาตให้เว็บไซต์เข้าถึงกล้อง กรุณากดอนุญาตที่แถบที่อยู่ (Address Bar) แล้วลองใหม่';
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    msg = 'ไม่พบกล้องเว็บแคมในอุปกรณ์นี้ คุณสามารถใช้งานโหมดมือ 3 มิติได้ทันที';
+                } else if (err.message) {
+                    msg = err.message;
+                }
+                document.getElementById('ar-error-msg').textContent = msg;
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        async function processARFrame() {
+            if (!APP.arActive || APP.mode !== 'ar') return;
+            const videoEl = document.getElementById('ar-video');
+            if (videoEl.readyState >= 2 && APP.arHandsInstance) {
+                try {
+                    await APP.arHandsInstance.send({ image: videoEl });
+                } catch (e) {
+                    // Skip occasional frame error
+                }
+            }
+            if (APP.arActive && APP.mode === 'ar') {
+                requestAnimationFrame(processARFrame);
+            }
+        }
+
+        function stopARCamera() {
+            APP.arActive = false;
+            APP.arHasHand = false;
+
+            if (APP.arStream) {
+                APP.arStream.getTracks().forEach(t => t.stop());
+                APP.arStream = null;
+            }
+            const videoEl = document.getElementById('ar-video');
+            if (videoEl) videoEl.srcObject = null;
+
+            document.getElementById('ar-placeholder').classList.remove('hidden');
+            document.getElementById('ar-left-hand-warning').classList.add('hidden');
+            document.getElementById('ar-no-hand-hint').classList.add('hidden');
+
+            const statusBadge = document.getElementById('ar-status-badge');
+            statusBadge.textContent = 'ปิดกล้องแล้ว';
+            statusBadge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700';
+
+            const toggleBtn = document.getElementById('btn-ar-toggle-cam');
+            toggleBtn.textContent = 'เปิดกล้อง AR';
+            toggleBtn.className = 'px-3 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition active:scale-95';
+        }
+
+        function toggleARCamera() {
+            if (APP.arActive) {
+                stopARCamera();
+            } else {
+                startARCamera();
+            }
+        }
+
+        function toggleHandednessInvert() {
+            playSound('click');
+            APP.arInvertHandedness = !APP.arInvertHandedness;
+        }
+
+        // Draw AR Video + Skeleton + 3D Physics Vectors on Canvas
+        function onARHandResults(results) {
+            if (!APP.arActive || APP.mode !== 'ar') return;
+
+            const canvas = document.getElementById('ar-canvas');
+            const ctx = canvas.getContext('2d');
+            const wrapper = document.getElementById('viewport-wrapper');
+
+            // Keep canvas crisp & matched to container
+            const cw = wrapper.clientWidth;
+            const ch = wrapper.clientHeight;
+            if (canvas.width !== cw || canvas.height !== ch) {
+                canvas.width = cw;
+                canvas.height = ch;
+            }
+
+            ctx.save();
+            ctx.clearRect(0, 0, cw, ch);
+
+            // Draw mirrored video with cover-fit aspect ratio
+            const img = results.image;
+            const imgRatio = img.width / img.height;
+            const canvasRatio = cw / ch;
+            let drawW, drawH, offsetX, offsetY;
+            if (canvasRatio > imgRatio) {
+                drawW = cw;
+                drawH = cw / imgRatio;
+                offsetX = 0;
+                offsetY = (ch - drawH) / 2;
+            } else {
+                drawH = ch;
+                drawW = ch * imgRatio;
+                offsetX = (cw - drawW) / 2;
+                offsetY = 0;
+            }
+
+            ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+
+            // Subtle sci-fi vignette overlay
+            ctx.fillStyle = 'rgba(4, 8, 18, 0.18)';
+            ctx.fillRect(0, 0, cw, ch);
+
+            const leftWarn = document.getElementById('ar-left-hand-warning');
+            const noHandHint = document.getElementById('ar-no-hand-hint');
+
+            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                APP.arHasHand = false;
+                leftWarn.classList.add('hidden');
+                noHandHint.classList.remove('hidden');
+                ctx.restore();
+                return;
+            }
+
+            noHandHint.classList.add('hidden');
+            const lm = results.multiHandLandmarks[0];
+            const rawLabel = results.multiHandedness && results.multiHandedness[0]
+                ? results.multiHandedness[0].label
+                : 'Right';
+
+            // With selfieMode: true, MediaPipe labels the user's real right hand as 'Right'
+            const isRightHand = APP.arInvertHandedness ? (rawLabel === 'Left') : (rawLabel === 'Right');
+
+            // Helper: map normalized landmark to canvas pixel
+            const toPx = (pt) => ({
+                x: offsetX + pt.x * drawW,
+                y: offsetY + pt.y * drawH
+            });
+
+            // Draw subtle futuristic hand skeleton
+            drawHandSkeleton(ctx, lm, toPx, isRightHand);
+
+            if (!isRightHand) {
+                APP.arHasHand = false;
+                leftWarn.classList.remove('hidden');
+                ctx.restore();
+                return;
+            }
+
+            leftWarn.classList.add('hidden');
+            APP.arHasHand = true;
+
+            // ---- 3D VECTOR CALCULATION FROM LANDMARKS ----
+            // Right-handed screen space: +X right, +Y up, +Z out of screen (toward user)
+            const aspect = img.width / img.height;
+            const to3D = (pt) => new THREE.Vector3(pt.x * aspect, -pt.y, -pt.z * 1.45);
+
+            const pWrist = to3D(lm[0]);
+            const pThumbBase = to3D(lm[1]);
+            const pThumbTip = to3D(lm[4]);
+            const pIndexMCP = to3D(lm[5]);
+            const pMiddleTip = to3D(lm[12]);
+            const pPinkyMCP = to3D(lm[17]);
+
+            // Thumb direction = Velocity v
+            const rawV = pThumbTip.clone().sub(pThumbBase).normalize();
+
+            // Four fingers direction = Magnetic field B (wrist to middle tip)
+            const rawB = pMiddleTip.clone().sub(pWrist).normalize();
+
+            // Force direction = q * (v × B)
+            let rawF = rawV.clone().cross(rawB);
+            if (rawF.lengthSq() < 0.08) {
+                // Fallback to anatomical palm normal if thumb is folded close to fingers
+                const v1 = pIndexMCP.clone().sub(pWrist);
+                const v2 = pPinkyMCP.clone().sub(pWrist);
+                rawF = v1.cross(v2);
+            }
+            rawF.normalize().multiplyScalar(APP.charge);
+
+            // Smooth vectors with exponential moving average to eliminate webcam jitter
+            const smoothAlpha = 0.28;
+            APP.arSmoothedV.lerp(rawV, smoothAlpha).normalize();
+            APP.arSmoothedB.lerp(rawB, smoothAlpha).normalize();
+            APP.arSmoothedF.lerp(rawF, smoothAlpha).normalize();
+
+            APP.vecV.copy(APP.arSmoothedV);
+            APP.vecB.copy(APP.arSmoothedB);
+            APP.vecF.copy(APP.arSmoothedF);
+
+            updateDirectionHUD();
+
+            // Compute palm center in canvas pixels (midpoint of wrist 0 and middle MCP 9)
+            const palmOrigin = {
+                x: (toPx(lm[0]).x + toPx(lm[9]).x) * 0.5,
+                y: (toPx(lm[0]).y + toPx(lm[9]).y) * 0.5
+            };
+
+            // Draw 3D-projected vector arrows overlaid on the real palm
+            const arrowScale = Math.min(cw, ch) * 0.28;
+            drawARVectorArrow(ctx, palmOrigin, APP.vecV, arrowScale, '#22d3ee', 'v');
+            drawARVectorArrow(ctx, palmOrigin, APP.vecB, arrowScale * 1.08, '#34d399', 'B');
+            drawARVectorArrow(
+                ctx,
+                palmOrigin,
+                APP.vecF,
+                arrowScale * 1.05,
+                APP.charge > 0 ? '#f87171' : '#fb923c',
+                APP.charge > 0 ? 'F (+q)' : 'F (-q)'
+            );
+
+            ctx.restore();
+        }
+
+        function drawHandSkeleton(ctx, lm, toPx, isRightHand) {
+            const connections = [
+                [0,1],[1,2],[2,3],[3,4],
+                [0,5],[5,6],[6,7],[7,8],
+                [5,9],[9,10],[10,11],[11,12],
+                [9,13],[13,14],[14,15],[15,16],
+                [13,17],[17,18],[18,19],[19,20],[0,17]
+            ];
+            ctx.strokeStyle = isRightHand ? 'rgba(56, 189, 248, 0.55)' : 'rgba(251, 191, 36, 0.7)';
+            ctx.lineWidth = 2;
+            connections.forEach(([a, b]) => {
+                const pa = toPx(lm[a]);
+                const pb = toPx(lm[b]);
+                ctx.beginPath();
+                ctx.moveTo(pa.x, pa.y);
+                ctx.lineTo(pb.x, pb.y);
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = isRightHand ? '#e0f2fe' : '#fef08a';
+            lm.forEach(pt => {
+                const p = toPx(pt);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawARVectorArrow(ctx, origin, vec3, scale, color, label) {
+            // Convert +Y up to canvas -Y up
+            const dx = vec3.x * scale;
+            const dy = -vec3.y * scale;
+            const mag2D = Math.hypot(dx, dy);
+
+            const endX = origin.x + dx;
+            const endY = origin.y + dy;
+
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+
+            // If vector points strongly into (-Z) or out of (+Z) screen, draw ⊗ or ⊙ symbol prominently
+            if (Math.abs(vec3.z) > 0.72) {
+                const isOut = vec3.z > 0;
+                const symX = origin.x + dx * 0.45;
+                const symY = origin.y + dy * 0.45;
+                const r = 18;
+
+                // Outer glowing ring
+                ctx.beginPath();
+                ctx.arc(symX, symY, r, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(4, 8, 18, 0.8)';
+                ctx.fill();
+                ctx.lineWidth = 3.5;
+                ctx.strokeStyle = color;
+                ctx.stroke();
+
+                if (isOut) {
+                    // ⊙ Dot in center (Out of screen)
+                    ctx.beginPath();
+                    ctx.arc(symX, symY, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                } else {
+                    // ⊗ Cross in center (Into screen)
+                    const d = 9;
+                    ctx.beginPath();
+                    ctx.moveTo(symX - d, symY - d);
+                    ctx.lineTo(symX + d, symY + d);
+                    ctx.moveTo(symX + d, symY - d);
+                    ctx.lineTo(symX - d, symY + d);
+                    ctx.lineWidth = 3.2;
+                    ctx.strokeStyle = color;
+                    ctx.stroke();
+                }
+
+                // Label pill
+                drawARLabelPill(ctx, symX, symY - 30, `${label} ${isOut ? '⊙' : '⊗'}`, color);
+                ctx.restore();
+                return;
+            }
+
+            // Standard 2D/3D projected arrow shaft
+            ctx.beginPath();
+            ctx.moveTo(origin.x, origin.y);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Arrowhead
+            if (mag2D > 12) {
+                const angle = Math.atan2(dy, dx);
+                const headLen = 18;
+                ctx.beginPath();
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX - headLen * Math.cos(angle - Math.PI / 6), endY - headLen * Math.sin(angle - Math.PI / 6));
+                ctx.lineTo(endX - headLen * Math.cos(angle + Math.PI / 6), endY - headLen * Math.sin(angle + Math.PI / 6));
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Label near tip
+                const lx = endX + Math.cos(angle) * 26;
+                const ly = endY + Math.sin(angle) * 26;
+                drawARLabelPill(ctx, lx, ly, label, color);
+            }
+
+            ctx.restore();
+        }
+
+        function drawARLabelPill(ctx, x, y, text, color) {
+            ctx.save();
+            ctx.shadowBlur = 0;
+            ctx.font = '700 14px "JetBrains Mono", "Prompt", sans-serif';
+            const tw = ctx.measureText(text).width;
+            const padX = 10;
+            const bw = tw + padX * 2;
+            const bh = 26;
+
+            ctx.fillStyle = 'rgba(4, 8, 18, 0.85)';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+
+            ctx.beginPath();
+            ctx.roundRect(x - bw / 2, y - bh / 2, bw, bh, 999);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x, y + 1);
+            ctx.restore();
+        }
+
+        /* =========================================================================
+         * 7. MODE & CHARGE SWITCHING
+         * ========================================================================= */
+        function switchMode(newMode) {
+            if (APP.mode === newMode) return;
+            playSound('click');
+            APP.mode = newMode;
+
+            const btn3D = document.getElementById('btn-mode-3d');
+            const btnAR = document.getElementById('btn-mode-ar');
+            const cont3D = document.getElementById('mode-3d-container');
+            const contAR = document.getElementById('mode-ar-container');
+            const ctrl3D = document.getElementById('controls-3d-card');
+            const ctrlAR = document.getElementById('controls-ar-card');
+            const modeText = document.getElementById('hud-mode-text');
+
+            if (newMode === '3d') {
+                stopARCamera();
+                cont3D.classList.remove('hidden');
+                contAR.classList.add('hidden');
+                ctrl3D.classList.remove('hidden');
+                ctrlAR.classList.add('hidden');
+
+                btn3D.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm';
+                btnAR.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-white border border-transparent';
+                modeText.textContent = 'โหมดมือ 3 มิติ';
+
+                onWindowResize();
+                updateVectorsFrom3DHand();
+            } else {
+                cont3D.classList.add('hidden');
+                contAR.classList.remove('hidden');
+                ctrl3D.classList.add('hidden');
+                ctrlAR.classList.remove('hidden');
+
+                btnAR.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm';
+                btn3D.className = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-white border border-transparent';
+                modeText.textContent = 'โหมดกล้อง AR จับมือจริง';
+            }
+        }
+
+        function setCharge(q) {
+            playSound('click');
+            APP.charge = q;
+            const isPos = q > 0;
+
+            const btnPos = document.getElementById('btn-charge-pos');
+            const btnNeg = document.getElementById('btn-charge-neg');
+
+            if (isPos) {
+                btnPos.className = 'p-3 rounded-xl border-2 border-red-500 bg-red-500/15 text-left transition-all active:scale-95';
+                btnNeg.className = 'p-3 rounded-xl border-2 border-slate-700/80 bg-slate-950/60 hover:border-orange-500/50 text-left transition-all active:scale-95';
+            } else {
+                btnPos.className = 'p-3 rounded-xl border-2 border-slate-700/80 bg-slate-950/60 hover:border-red-500/50 text-left transition-all active:scale-95';
+                btnNeg.className = 'p-3 rounded-xl border-2 border-orange-500 bg-orange-500/15 text-left transition-all active:scale-95';
+            }
+
+            // Update Formula & Legend UI
+            const fFormula = document.getElementById('hud-formula-f');
+            const qFormula = document.getElementById('hud-formula-q');
+            const legendDot = document.getElementById('legend-f-dot');
+            const legendText = document.getElementById('legend-f-text');
+            const cardF = document.getElementById('card-dir-f');
+            const titleF = document.getElementById('dir-f-title');
+            const badgeF = document.getElementById('dir-f-badge');
+            const labelF = document.getElementById('label-f');
+
+            if (isPos) {
+                fFormula.className = 'text-red-400';
+                qFormula.className = 'text-red-300';
+                qFormula.textContent = '+q';
+                legendDot.className = 'w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_8px_#f87171]';
+                legendText.innerHTML = '<strong class="text-red-300">ฝ่ามือ</strong> = แรง F (+q)';
+                cardF.className = 'rounded-2xl bg-slate-900/80 border border-red-500/40 p-3 flex flex-col justify-between shadow-lg transition-colors';
+                titleF.className = 'text-[11px] sm:text-xs font-medium text-red-300';
+                badgeF.className = 'text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30';
+                badgeF.textContent = 'ฝ่ามือ';
+                labelF.className = 'vec-label bg-red-950/85 text-red-300 border border-red-400/60';
+            } else {
+                fFormula.className = 'text-orange-400';
+                qFormula.className = 'text-orange-300';
+                qFormula.textContent = '-q';
+                legendDot.className = 'w-2.5 h-2.5 rounded-full bg-orange-400 shadow-[0_0_8px_#fb923c]';
+                legendText.innerHTML = '<strong class="text-orange-300">หลังมือ</strong> = แรง F (-q)';
+                cardF.className = 'rounded-2xl bg-slate-900/80 border border-orange-500/40 p-3 flex flex-col justify-between shadow-lg transition-colors';
+                titleF.className = 'text-[11px] sm:text-xs font-medium text-orange-300';
+                badgeF.className = 'text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/30';
+                badgeF.textContent = 'หลังมือ';
+                labelF.className = 'vec-label bg-orange-950/85 text-orange-300 border border-orange-400/60';
+            }
+
+            update3DChargeAppearance();
+            if (APP.mode === '3d') {
+                updateVectorsFrom3DHand();
+            } else {
+                APP.vecF.copy(APP.vecV).cross(APP.vecB).multiplyScalar(APP.charge).normalize();
+                updateDirectionHUD();
+            }
+        }
+
+        /* =========================================================================
+         * 8. CHALLENGE MODE ENGINE (WORKS IN BOTH 3D & AR MODES)
+         * ========================================================================= */
+        function toggleChallengeMode() {
+            playSound('click');
+            APP.challengeActive = !APP.challengeActive;
+            const panel = document.getElementById('challenge-panel');
+            const btn = document.getElementById('btn-toggle-challenge');
+
+            if (APP.challengeActive) {
+                panel.classList.remove('hidden');
+                btn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 border border-amber-400 shadow-lg shadow-amber-500/20';
+                renderChallengeUI();
+            } else {
+                panel.classList.add('hidden');
+                document.getElementById('challenge-hold-indicator').classList.add('hidden');
+                btn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40';
+            }
+        }
+
+        function renderChallengeUI() {
+            document.getElementById('challenge-score').textContent = `${APP.challengeScore} / 500 คะแนน`;
+
+            // Progress dots
+            const dotsEl = document.getElementById('challenge-dots');
+            dotsEl.innerHTML = '';
+            CHALLENGES.forEach((_, idx) => {
+                const dot = document.createElement('div');
+                let cls = 'h-1.5 flex-1 rounded-full transition-all ';
+                if (idx < APP.challengeIndex || APP.challengeCompletedAll) cls += 'bg-emerald-400';
+                else if (idx === APP.challengeIndex) cls += 'bg-amber-400';
+                else cls += 'bg-slate-800';
+                dot.className = cls;
+                dotsEl.appendChild(dot);
+            });
+
+            const qBox = document.getElementById('challenge-question-box');
+            const solvedBox = document.getElementById('challenge-solved-box');
+            const completeBox = document.getElementById('challenge-complete-box');
+
+            if (APP.challengeCompletedAll) {
+                qBox.classList.add('hidden');
+                solvedBox.classList.add('hidden');
+                completeBox.classList.remove('hidden');
+                return;
+            }
+
+            completeBox.classList.add('hidden');
+            qBox.classList.remove('hidden');
+
+            const quest = CHALLENGES[APP.challengeIndex];
+            document.getElementById('challenge-q-num').textContent = `ข้อที่ ${quest.id} / ${CHALLENGES.length}`;
+            document.getElementById('challenge-q-tag').textContent = quest.tag;
+            document.getElementById('challenge-q-text').textContent = quest.text;
+
+            if (APP.challengeSolvedCurrent) {
+                solvedBox.classList.remove('hidden');
+                document.getElementById('challenge-explanation').textContent = quest.explanation;
+                document.getElementById('btn-next-quest').textContent =
+                    APP.challengeIndex < CHALLENGES.length - 1 ? 'ไปข้อถัดไป →' : 'ดูสรุปผลคะแนน 🏆';
+            } else {
+                solvedBox.classList.add('hidden');
+            }
+        }
+
+        function updateChallengeCheck(dt) {
+            const holdIndicator = document.getElementById('challenge-hold-indicator');
+            if (!APP.challengeActive || APP.challengeCompletedAll || APP.challengeSolvedCurrent) {
+                holdIndicator.classList.add('hidden');
+                return;
+            }
+
+            // In AR mode, require a detected right hand
+            if (APP.mode === 'ar' && !APP.arHasHand) {
+                APP.challengeHoldTime = 0;
+                holdIndicator.classList.add('hidden');
+                return;
+            }
+
+            const quest = CHALLENGES[APP.challengeIndex];
+            const okQ = (APP.charge === quest.q);
+            const okV = (APP.vecV.dot(quest.v) > 0.78);
+            const okB = (APP.vecB.dot(quest.B) > 0.78);
+
+            // Update live checklist badges
+            setCheckBadge('chk-q', okQ, 'ชนิดประจุ');
+            setCheckBadge('chk-v', okV, 'ทิศ v');
+            setCheckBadge('chk-b', okB, 'ทิศ B');
+
+            if (okQ && okV && okB) {
+                APP.challengeHoldTime += dt;
+                holdIndicator.classList.remove('hidden');
+
+                const progress = Math.min(1, APP.challengeHoldTime / APP.challengeRequiredHold);
+                const circle = document.getElementById('hold-progress-circle');
+                circle.style.strokeDashoffset = (94.2 * (1 - progress)).toFixed(1);
+
+                if (APP.challengeHoldTime >= APP.challengeRequiredHold) {
+                    // Quest Solved!
+                    APP.challengeSolvedCurrent = true;
+                    APP.challengeScore += 100;
+                    APP.challengeHoldTime = 0;
+                    holdIndicator.classList.add('hidden');
+                    playSound('success');
+                    renderChallengeUI();
+                }
+            } else {
+                APP.challengeHoldTime = Math.max(0, APP.challengeHoldTime - dt * 2);
+                holdIndicator.classList.add('hidden');
+            }
+        }
+
+        function setCheckBadge(id, isOk, label) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (isOk) {
+                el.className = 'px-2 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/60 flex items-center justify-center gap-1 text-emerald-300 font-semibold';
+                el.innerHTML = `<span>✓</span><span>${label}</span>`;
+            } else {
+                el.className = 'px-2 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 flex items-center justify-center gap-1 text-slate-400';
+                el.innerHTML = `<span>○</span><span>${label}</span>`;
+            }
+        }
+
+        function nextChallenge() {
+            playSound('click');
+            APP.challengeSolvedCurrent = false;
+            APP.challengeHoldTime = 0;
+
+            if (APP.challengeIndex < CHALLENGES.length - 1) {
+                APP.challengeIndex++;
+            } else {
+                APP.challengeCompletedAll = true;
+            }
+            renderChallengeUI();
+        }
+
+        function resetChallenges() {
+            playSound('click');
+            APP.challengeIndex = 0;
+            APP.challengeScore = 0;
+            APP.challengeSolvedCurrent = false;
+            APP.challengeCompletedAll = false;
+            APP.challengeHoldTime = 0;
+            renderChallengeUI();
+        }
+
+        /* =========================================================================
+         * 9. MAIN ANIMATION LOOP & RESIZE HANDLER
+         * ========================================================================= */
+        let lastTime = performance.now();
+
+        function animate(now) {
+            requestAnimationFrame(animate);
+            const dt = Math.min(0.05, (now - lastTime) / 1000);
+            lastTime = now;
+
+            if (APP.mode === '3d' && renderer && scene && camera) {
+                updateParticleSimulation(dt);
+                renderer.render(scene, camera);
+                update3DLabels();
+            }
+
+            updateChallengeCheck(dt);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('mode-3d-container');
+            if (!container || !renderer || !camera) return;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            if (w > 0 && h > 0) {
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            }
+        }
+
+        window.addEventListener('resize', onWindowResize);
+
+        window.onload = function () {
+            initThreeJS();
+            setCharge(1);
+            lastTime = performance.now();
+            animate(lastTime);
+        };
+    </script>
+</body>
+</html>
