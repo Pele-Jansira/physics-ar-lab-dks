@@ -1,0 +1,3580 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CosmicGenesis AR 4.0: Guardians of the Cosmos — วิวัฒนาการและปฐมบทเอกภพ</title>
+
+  <!-- Google Fonts: Kanit (Display Thai), Sarabun (Body Thai), Orbitron (Sci-Fi HUD) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Orbitron:wght@500;700;900&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Kanit', 'sans-serif'],
+            body: ['Sarabun', 'sans-serif'],
+            sci: ['Orbitron', 'monospace'],
+          },
+          colors: {
+            cosmos: {
+              bg: '#060214',
+              deep: '#13062e',
+              magenta: '#ff2e97',
+              violet: '#7b2cbf',
+              cyan: '#00f5d4',
+              gold: '#ffd166',
+              plasma: '#38f9a8',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Three.js r128 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #20084d 0%, #09031c 62%, #04010d 100%);
+      color: #f8fafc;
+      font-family: 'Sarabun', sans-serif;
+      user-select: none;
+    }
+
+    /* Rear Camera Feed for WebAR Mode */
+    #ar-video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      display: none;
+    }
+
+    /* Three.js Canvas Layer */
+    #webgl-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      touch-action: none;
+      cursor: grab;
+    }
+    #webgl-container:active { cursor: grabbing; }
+    #webgl-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Milano Cockpit Vignette & Neon Corner Brackets */
+    .cockpit-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      box-shadow: inset 0 0 85px rgba(6, 2, 20, 0.85);
+    }
+    .bracket {
+      position: fixed;
+      width: 26px;
+      height: 26px;
+      z-index: 6;
+      pointer-events: none;
+      opacity: 0.78;
+    }
+    .bracket-tl { top: 6px; left: 6px; border-top: 2px solid #00f5d4; border-left: 2px solid #00f5d4; border-radius: 6px 0 0 0; }
+    .bracket-tr { top: 6px; right: 6px; border-top: 2px solid #ff2e97; border-right: 2px solid #ff2e97; border-radius: 0 6px 0 0; }
+    .bracket-bl { bottom: 6px; left: 6px; border-bottom: 2px solid #ffd166; border-left: 2px solid #ffd166; border-radius: 0 0 0 6px; }
+    .bracket-br { bottom: 6px; right: 6px; border-bottom: 2px solid #7b2cbf; border-right: 2px solid #7b2cbf; border-radius: 0 0 6px 0; }
+
+    /* Holographic Glass Panels */
+    .holo-panel {
+      background: linear-gradient(145deg, rgba(19, 6, 46, 0.86), rgba(6, 2, 20, 0.92));
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(0, 245, 212, 0.34);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.62), inset 0 0 18px rgba(255, 46, 151, 0.09);
+    }
+    .holo-panel-gold {
+      background: linear-gradient(145deg, rgba(28, 10, 54, 0.93), rgba(8, 3, 24, 0.96));
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1.5px solid rgba(255, 209, 102, 0.6);
+      box-shadow: 0 0 38px rgba(255, 209, 102, 0.22), 0 12px 42px rgba(0, 0, 0, 0.78);
+    }
+
+    /* Flash & Damage Overlays */
+    #flash-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.6s ease-out;
+    }
+    #damage-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 44;
+      pointer-events: none;
+      background: radial-gradient(circle, transparent 40%, rgba(255, 46, 151, 0.72) 100%);
+      opacity: 0;
+      transition: opacity 0.35s ease-out;
+    }
+
+    @keyframes shakeAnim {
+      0%, 100% { transform: translate(0, 0); }
+      15% { transform: translate(-7px, 5px); }
+      30% { transform: translate(7px, -5px); }
+      45% { transform: translate(-5px, -4px); }
+      60% { transform: translate(5px, 4px); }
+      75% { transform: translate(-3px, 2px); }
+    }
+    .shake-hit { animation: shakeAnim 0.45s ease-in-out; }
+
+    /* Guardians Neon Buttons */
+    @keyframes pulseGold {
+      0%, 100% { box-shadow: 0 0 14px rgba(255, 209, 102, 0.5), 0 0 26px rgba(255, 46, 151, 0.32); }
+      50% { box-shadow: 0 0 24px rgba(255, 209, 102, 0.85), 0 0 40px rgba(255, 46, 151, 0.55); }
+    }
+    .btn-guardian {
+      background: linear-gradient(135deg, #ffd166 0%, #ff2e97 100%);
+      color: #090318;
+      font-family: 'Kanit', sans-serif;
+      font-weight: 700;
+      animation: pulseGold 2.4s infinite;
+    }
+    .btn-cyan {
+      background: linear-gradient(135deg, #00f5d4 0%, #38f9a8 100%);
+      color: #060214;
+      font-family: 'Kanit', sans-serif;
+      font-weight: 700;
+      box-shadow: 0 0 18px rgba(0, 245, 212, 0.45);
+    }
+
+    /* Range Sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: linear-gradient(90deg, rgba(0,245,212,0.3), rgba(255,46,151,0.42), rgba(255,209,102,0.48));
+      height: 10px;
+      border-radius: 999px;
+      outline: none;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00f5d4, #ff2e97);
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 0 16px rgba(0, 245, 212, 0.9);
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00f5d4, #ff2e97);
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 0 16px rgba(0, 245, 212, 0.9);
+      cursor: pointer;
+    }
+
+    /* Center 3D Targeting Reticle (Stage 3) */
+    #target-reticle {
+      position: fixed;
+      top: 42%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 82px;
+      height: 82px;
+      z-index: 15;
+      pointer-events: none;
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+    #target-reticle.locked {
+      transform: translate(-50%, -50%) scale(1.14);
+      filter: drop-shadow(0 0 14px #00f5d4);
+    }
+
+    /* Absorption Spectrum Gradient */
+    .spectrum-bar {
+      background: linear-gradient(90deg,
+        #3b0764 0%,
+        #2563eb 18%,
+        #06b6d4 35%,
+        #22c55e 52%,
+        #eab308 68%,
+        #f97316 82%,
+        #dc2626 93%,
+        #7f1d1d 100%
+      );
+    }
+
+    /* NOVA-AI Avatar Pulse */
+    @keyframes novaPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 12px #00f5d4; }
+      50% { transform: scale(1.08); box-shadow: 0 0 22px #ff2e97; }
+    }
+    .nova-orb { animation: novaPulse 2s infinite; }
+
+    /* Scrollbars */
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: rgba(15, 8, 36, 0.5); }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0, 245, 212, 0.45); border-radius: 99px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+  <!-- Rear Camera Video Feed for WebAR -->
+  <video id="ar-video" autoplay playsinline muted></video>
+
+  <!-- Three.js WebGL 3D Scene -->
+  <div id="webgl-container"></div>
+
+  <!-- Milano Cockpit Frame & Overlays -->
+  <div class="cockpit-vignette"></div>
+  <div class="bracket bracket-tl"></div>
+  <div class="bracket bracket-tr"></div>
+  <div class="bracket bracket-bl"></div>
+  <div class="bracket bracket-br"></div>
+  <div id="flash-overlay"></div>
+  <div id="damage-overlay"></div>
+
+  <!-- Center 3D Targeting Reticle (Stage 3) -->
+  <div id="target-reticle" class="hidden flex items-center justify-center">
+    <svg viewBox="0 0 100 100" class="w-full h-full">
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#00f5d4" stroke-width="2" stroke-dasharray="14 8" id="reticle-ring"/>
+      <polygon points="50,6 90,28 90,72 50,94 10,72 10,28" fill="none" stroke="#ffd166" stroke-width="1.5" opacity="0.78"/>
+      <line x1="50" y1="16" x2="50" y2="30" stroke="#00f5d4" stroke-width="2"/>
+      <line x1="50" y1="70" x2="50" y2="84" stroke="#00f5d4" stroke-width="2"/>
+      <line x1="16" y1="50" x2="30" y2="50" stroke="#00f5d4" stroke-width="2"/>
+      <line x1="70" y1="50" x2="84" y2="50" stroke="#00f5d4" stroke-width="2"/>
+      <circle cx="50" cy="50" r="3.2" fill="#ff2e97"/>
+    </svg>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md pointer-events-none flex flex-col gap-2 items-center"></div>
+
+  <!-- ===================================================================== -->
+  <!-- 1. START SCREEN                                                       -->
+  <!-- ===================================================================== -->
+  <div id="start-screen" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmos-bg/80 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-md holo-panel-gold rounded-3xl p-5 sm:p-6 my-auto">
+      <div class="flex items-center justify-center gap-2 mb-2">
+        <span class="px-3 py-1 rounded-full text-[11px] font-sci font-bold tracking-wider bg-cosmos-magenta/20 text-cosmos-gold border border-cosmos-gold/50">
+          COSMIC MIX VOL. 1 • 9 EPOCHS • ม.6 AR
+        </span>
+      </div>
+
+      <h1 class="font-sci text-2xl sm:text-3xl font-black text-center bg-gradient-to-r from-cosmos-gold via-cosmos-magenta to-cosmos-cyan bg-clip-text text-transparent tracking-wide">
+        GUARDIANS OF THE COSMOS
+      </h1>
+      <p class="font-display text-center text-base font-semibold text-white mt-0.5">
+        CosmicGenesis AR 4.0 • วิวัฒนาการและปฐมบทเอกภพ
+      </p>
+      <p class="text-center text-xs text-slate-300 mt-1 mb-4">
+        ควบคุมยาน Milano ท่อง <b>9 ยุควิวัฒนาการเอกภพ</b> (t = 0 ถึง 13.8 พันล้านปี) พร้อม 4 ภารกิจสมการฟิสิกส์จริง และฉาก 3 มิติเชื่อมยุค!
+      </p>
+
+      <!-- Highlight Features -->
+      <div class="grid grid-cols-2 gap-2 mb-4 text-xs">
+        <div class="bg-cosmos-deep/85 border border-cosmos-magenta/40 rounded-xl p-2.5">
+          <div class="font-display font-semibold text-cosmos-magenta">⏳ 9 ยุควิวัฒนาการ</div>
+          <div class="text-slate-300 text-[11px]">เอกฐาน → ควาร์ก → นิวเคลียส → ดาว → ปัจจุบัน</div>
+        </div>
+        <div class="bg-cosmos-deep/85 border border-cosmos-gold/40 rounded-xl p-2.5">
+          <div class="font-display font-semibold text-cosmos-gold">📐 4 ภารกิจสมการจริง</div>
+          <div class="text-slate-300 text-[11px]">ฟรีดแมน, กฎของวีน, เทียนมาตรฐาน, ฮับเบิล</div>
+        </div>
+        <div class="bg-cosmos-deep/85 border border-cosmos-cyan/40 rounded-xl p-2.5">
+          <div class="font-display font-semibold text-cosmos-cyan">🧬 ฉากเชื่อมยุค 3 มิติ</div>
+          <div class="text-slate-300 text-[11px]">หลอมนิวเคลียส H/He, ดาวรุ่นแรก, ระบบสุริยะ</div>
+        </div>
+        <div class="bg-cosmos-deep/85 border border-cosmos-plasma/40 rounded-xl p-2.5">
+          <div class="font-display font-semibold text-cosmos-plasma">🧮 เครื่องคิดเลขวิทย์</div>
+          <div class="text-slate-300 text-[11px]">log₁₀, 10ˣ, ค่าคงที่ฟิสิกส์ &amp; ใบรับรอง PNG</div>
+        </div>
+      </div>
+
+      <!-- Pilot Name & Audio Settings -->
+      <div class="space-y-2.5 mb-5">
+        <div>
+          <label for="pilot-name-input" class="block text-xs text-cosmos-cyan font-display mb-1">ชื่อกัปตันยาน (แสดงบนใบรับรอง Star-Lord)</label>
+          <input id="pilot-name-input" type="text" placeholder="พิมพ์ชื่อ-นามสกุล (หรือเว้นว่างได้)"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-cosmos-bg/90 border border-cosmos-cyan/45 text-white text-sm focus:outline-none focus:border-cosmos-gold" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex items-center justify-between px-3 py-2 rounded-xl bg-cosmos-deep/80 border border-cosmos-magenta/35 cursor-pointer">
+            <span class="text-xs font-display text-white">🎵 ดนตรี Synth</span>
+            <input id="start-music-toggle" type="checkbox" checked class="w-4 h-4 accent-pink-500 cursor-pointer" />
+          </label>
+          <label class="flex items-center justify-between px-3 py-2 rounded-xl bg-cosmos-deep/80 border border-cosmos-cyan/35 cursor-pointer">
+            <span class="text-xs font-display text-white">🔊 เสียงพากย์ไทย</span>
+            <input id="start-voice-toggle" type="checkbox" checked class="w-4 h-4 accent-teal-400 cursor-pointer" />
+          </label>
+        </div>
+      </div>
+
+      <div class="space-y-2.5">
+        <button id="btn-launch-3d" class="w-full py-3.5 px-4 rounded-2xl text-base btn-guardian transition active:scale-95">
+          🚀 ออกทะยานสู่เอกภพ (โหมด 3D เนบิวลา)
+        </button>
+        <button id="btn-launch-ar" class="w-full py-2.5 px-4 rounded-2xl font-display font-semibold text-sm text-cosmos-cyan bg-cosmos-deep/90 hover:bg-cosmos-deep border border-cosmos-cyan/50 transition active:scale-95">
+          📷 เปิดกล้อง AR ทันที (ซ้อนเอกภพในห้องเรียน)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. CINEMATIC INTRO OVERLAY (3 SCENES + NOVA-AI)                       -->
+  <!-- ===================================================================== -->
+  <div id="intro-overlay" class="fixed inset-0 z-30 hidden flex-col justify-between p-4 pointer-events-none">
+    <div class="max-w-xl w-full mx-auto flex items-center justify-between pointer-events-auto">
+      <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full holo-panel text-xs font-sci text-cosmos-gold">
+        <span class="w-2 h-2 rounded-full bg-cosmos-magenta animate-ping"></span>
+        <span id="intro-badge">SCENE 1 / 3 • SINGULARITY</span>
+      </div>
+      <button id="btn-intro-skip" class="px-3.5 py-1.5 rounded-full holo-panel text-xs font-display text-slate-200 hover:text-cosmos-gold active:scale-95">
+        ข้ามบทนำ ⏭
+      </button>
+    </div>
+
+    <div class="max-w-xl w-full mx-auto holo-panel-gold rounded-3xl p-4 sm:p-5 pointer-events-auto">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cosmos-cyan via-cosmos-violet to-cosmos-magenta flex items-center justify-center text-lg nova-orb shrink-0">
+          🤖
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <span class="font-sci text-xs font-bold text-cosmos-cyan tracking-wider">NOVA-AI • CO-PILOT</span>
+            <span id="intro-era-tag" class="text-[11px] font-display text-cosmos-gold">t = 0: ภาวะเอกฐาน</span>
+          </div>
+          <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1">
+            <div id="intro-bar" class="h-full bg-gradient-to-r from-cosmos-cyan via-cosmos-magenta to-cosmos-gold transition-all duration-500" style="width: 33%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <p id="intro-text" class="text-sm sm:text-base text-white leading-relaxed min-h-[3.8rem] font-body"></p>
+
+      <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-white/15">
+        <div class="flex gap-1.5">
+          <span class="intro-dot w-2.5 h-2.5 rounded-full bg-cosmos-gold"></span>
+          <span class="intro-dot w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+          <span class="intro-dot w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+        </div>
+        <button id="btn-intro-next" class="px-5 py-2 rounded-xl text-sm btn-cyan active:scale-95">
+          ต่อไป ➜
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 3. MAIN MILANO COCKPIT HUD                                            -->
+  <!-- ===================================================================== -->
+  <div id="game-hud" class="fixed inset-0 z-20 hidden flex-col justify-between pointer-events-none">
+    <!-- TOP COCKPIT TELEMETRY BAR -->
+    <header class="w-full p-2 sm:p-2.5 pointer-events-auto">
+      <div class="max-w-3xl mx-auto holo-panel rounded-2xl p-2 sm:p-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-1.5">
+          <!-- Left: Shield + Score + Combo -->
+          <div class="flex items-center gap-2">
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1">
+                <span class="text-[9px] font-sci text-cosmos-cyan">SHIELD</span>
+                <span id="hud-shield-text" class="text-[10px] font-sci font-bold text-cosmos-plasma">100%</span>
+              </div>
+              <div class="w-16 sm:w-22 h-2 bg-slate-900 rounded-full overflow-hidden border border-cosmos-cyan/40">
+                <div id="hud-shield-bar" class="h-full bg-gradient-to-r from-cosmos-plasma to-cosmos-cyan transition-all duration-300" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <div class="px-2 py-1 rounded-xl bg-cosmos-deep/90 border border-cosmos-gold/40 flex items-center gap-1">
+              <span class="font-sci text-[11px] sm:text-xs font-bold text-cosmos-gold">★ <span id="hud-score">0</span></span>
+              <span id="hud-combo" class="px-1 py-0.5 rounded bg-cosmos-magenta/30 text-cosmos-magenta font-sci text-[9px] font-bold">x1</span>
+            </div>
+          </div>
+
+          <!-- Right: Compact Cockpit Controls -->
+          <div class="flex flex-wrap items-center gap-1">
+            <button id="btn-ar-toggle" title="สลับกล้องหลัง AR / โหมด 3D อวกาศ"
+              class="px-2 py-1.5 rounded-xl bg-cosmos-deep/90 hover:bg-slate-800 border border-cosmos-cyan/50 text-[10px] sm:text-xs font-display text-cosmos-cyan font-semibold active:scale-95">
+              📷 AR
+            </button>
+            <button id="btn-cosmic-mix" title="เปิด/ปิดเพลง Cosmic Mix Vol. 1"
+              class="px-2 py-1.5 rounded-xl bg-cosmos-magenta/25 hover:bg-cosmos-magenta/40 border border-cosmos-magenta/55 text-[10px] sm:text-xs font-sci text-white active:scale-95">
+              🎵 MIX
+            </button>
+            <button id="btn-voice-toggle" title="เปิด/ปิดเสียงพากย์ไทย"
+              class="px-2 py-1.5 rounded-xl bg-cosmos-deep/90 hover:bg-slate-800 border border-cosmos-cyan/40 text-xs active:scale-95">
+              🔊
+            </button>
+            <button id="btn-open-codex" title="คู่มือวิวัฒนาการเอกภพ 9 ยุค"
+              class="px-2 py-1.5 rounded-xl bg-cosmos-violet/35 hover:bg-cosmos-violet/55 border border-purple-400/60 text-[10px] sm:text-xs font-display text-purple-100 font-semibold active:scale-95">
+              ⏳ ไทม์ไลน์
+            </button>
+            <button id="btn-open-manual" title="คลังสูตร & เครื่องคิดเลขวิทยาศาสตร์"
+              class="px-2 py-1.5 rounded-xl bg-cosmos-gold/25 hover:bg-cosmos-gold/40 border border-cosmos-gold/60 text-[10px] sm:text-xs font-display text-cosmos-gold font-semibold active:scale-95">
+              📖 สูตร
+            </button>
+            <button id="btn-gyro-toggle" title="เปิด/ปิดไจโรสโคป"
+              class="p-1.5 rounded-xl bg-cosmos-deep/90 hover:bg-slate-800 border border-slate-600 text-xs active:scale-95">
+              🧭
+            </button>
+            <button id="btn-reset-view" title="รีเซ็ตมุมมอง 3 มิติ"
+              class="p-1.5 rounded-xl bg-cosmos-deep/90 hover:bg-slate-800 border border-slate-600 text-xs active:scale-95">
+              🎯
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOVA-AI Compact Comm-Log Bar -->
+      <div id="nova-comm-bar" class="max-w-3xl mx-auto mt-1.5 hidden">
+        <div class="holo-panel rounded-xl px-2.5 py-1.5 border border-cosmos-cyan/45 flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-cosmos-cyan to-cosmos-magenta flex items-center justify-center text-sm shrink-0 nova-orb">
+            🤖
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-sci text-[9px] font-bold text-cosmos-cyan tracking-wider">NOVA-AI</span>
+              <span id="hud-era-time" class="font-sci text-[9px] text-cosmos-gold truncate">Epoch 1–2 • t = 0 → 10⁻³² s</span>
+            </div>
+            <p id="nova-comm-text" class="text-xs text-white leading-snug"></p>
+          </div>
+          <button id="btn-hide-comm" class="text-slate-400 hover:text-white text-xs px-1">✕</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- BOTTOM DOCK: MISSION CONTROLS + INTERACTIVE 9-EPOCH EVOLUTION TIMELINE -->
+    <footer class="w-full p-2 sm:p-2.5 pointer-events-auto">
+      <div class="max-w-3xl mx-auto space-y-1.5">
+        <!-- Collapse Handle -->
+        <div class="flex justify-center">
+          <button id="btn-toggle-dock" class="px-3 py-0.5 rounded-full holo-panel text-[10px] font-display text-cosmos-cyan border border-cosmos-cyan/40">
+            ▼ ซ่อน/แสดงแผงภารกิจ
+          </button>
+        </div>
+
+        <!-- Dynamic Mission / Evolution Bridge Control Panel -->
+        <div id="mission-dock" class="holo-panel rounded-2xl p-3 border border-cosmos-cyan/40 max-h-[38vh] overflow-y-auto custom-scroll transition-all duration-300">
+          <!-- Injected by JS -->
+        </div>
+
+        <!-- INTERACTIVE 9-EPOCH COSMIC EVOLUTION TIMELINE BAR -->
+        <div class="holo-panel rounded-2xl px-2 py-1.5 border border-cosmos-violet/50">
+          <div class="flex items-center justify-between px-1 mb-1">
+            <span class="font-display text-[10px] text-cosmos-gold font-semibold">⏳ วิวัฒนาการเอกภพ 9 ยุค (แตะเพื่อดูรายละเอียด)</span>
+            <span id="timeline-unlock-count" class="font-sci text-[10px] text-cosmos-cyan">1 / 9 UNLOCKED</span>
+          </div>
+          <div id="epoch-timeline-bar" class="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+            <!-- 9 Epoch pills injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 4. EVOLUTION CODEX MODAL (9-EPOCH IPST GRADE 12 ENCYCLOPEDIA)         -->
+  <!-- ===================================================================== -->
+  <div id="codex-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-4 bg-cosmos-bg/85 backdrop-blur-md">
+    <div class="w-full max-w-2xl max-h-[88vh] holo-panel-gold rounded-3xl flex flex-col overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/15 bg-cosmos-deep/90">
+        <div>
+          <div class="font-sci text-[10px] text-cosmos-cyan tracking-widest">COSMIC EVOLUTION CODEX • สสวท. ม.6</div>
+          <h3 class="font-display font-bold text-base sm:text-lg text-cosmos-gold">⏳ เส้นเวลาวิวัฒนาการของเอกภพ (9 ยุค)</h3>
+        </div>
+        <button id="btn-close-codex" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-display">✕ ปิด</button>
+      </div>
+
+      <!-- Featured Selected Epoch Detail Card -->
+      <div id="codex-detail" class="p-3.5 sm:p-4 bg-cosmos-bg/75 border-b border-cosmos-cyan/30">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Scrollable List of All 9 Epochs -->
+      <div id="codex-list" class="flex-1 p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto custom-scroll">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 5. PHYSICS INSIGHT / STAGE SUMMARY / MILESTONE MODAL                  -->
+  <!-- ===================================================================== -->
+  <div id="info-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-cosmos-bg/80 backdrop-blur-md">
+    <div class="w-full max-w-md holo-panel-gold rounded-3xl p-5 sm:p-6 shadow-2xl">
+      <div id="info-modal-badge" class="inline-block px-3 py-1 rounded-full text-[11px] font-sci font-bold bg-cosmos-magenta/25 text-cosmos-gold border border-cosmos-gold/45 mb-2">
+        MISSION BRIEFING
+      </div>
+      <h2 id="info-modal-title" class="font-display text-xl font-bold text-white">หัวข้อ</h2>
+      <div id="info-modal-body" class="mt-3 space-y-2.5 text-xs sm:text-sm text-slate-200 leading-relaxed"></div>
+      <button id="info-modal-btn" class="mt-5 w-full py-3 rounded-2xl text-sm sm:text-base btn-guardian active:scale-95">
+        ดำเนินการต่อ ➜
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 6. FORMULA & SCIENTIFIC CALCULATOR SLIDE-OVER DRAWER                  -->
+  <!-- ===================================================================== -->
+  <div id="manual-drawer" class="fixed inset-0 z-50 hidden justify-end bg-cosmos-bg/75 backdrop-blur-sm">
+    <div class="w-full max-w-md h-full holo-panel border-l border-cosmos-cyan/50 flex flex-col">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/15 bg-cosmos-deep/90">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📖</span>
+          <h3 class="font-display font-bold text-base text-cosmos-gold">คลังสูตร &amp; เครื่องคิดเลขวิทย์</h3>
+        </div>
+        <button id="btn-close-manual" class="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm">✕ ปิด</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-1 p-2 bg-cosmos-bg/70 border-b border-white/10">
+        <button id="tab-formulas" class="py-2 rounded-xl font-display font-semibold text-xs bg-cosmos-cyan/25 text-cosmos-cyan border border-cosmos-cyan/50">
+          📐 สูตร &amp; ค่าคงที่ ม.6
+        </button>
+        <button id="tab-calc" class="py-2 rounded-xl font-display font-semibold text-xs bg-slate-900/70 text-slate-300 border border-slate-700">
+          🧮 เครื่องคิดเลขวิทย์
+        </button>
+      </div>
+
+      <!-- Tab 1: Formulas & Constants -->
+      <div id="panel-formulas" class="flex-1 p-4 space-y-3 overflow-y-auto custom-scroll text-xs">
+        <div class="p-3 rounded-2xl bg-cosmos-violet/25 border border-purple-400/45">
+          <div class="font-display font-semibold text-cosmos-gold text-sm mb-1">🔑 ค่าคงที่ทางจักรวาลวิทยา</div>
+          <div class="font-sci text-[11px] space-y-1 text-slate-100">
+            <div>• c = 3 × 10⁵ km/s (อัตราเร็วแสง)</div>
+            <div>• b = 2.898 × 10⁻³ m·K (ค่าคงตัวของวีน)</div>
+            <div>• 1 Mpc = 10⁶ pc (เมกะพาร์เซก)</div>
+            <div>• t_H (พันล้านปี) ≈ 977.8 / H₀</div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-cosmos-deep/85 border border-cosmos-magenta/35">
+          <div class="font-display font-semibold text-cosmos-magenta text-sm">1. สมการฟรีดแมน (Friedmann)</div>
+          <div class="font-sci text-[11px] bg-black/50 p-2 rounded-lg mt-1 text-white">H² = (8πG/3)ρ − kc²/a² + Λc²/3</div>
+          <p class="text-slate-300 mt-1.5">ความหนาแน่นรวม <b>Ω = Ωₘ + Ω_Λ</b><br>• Ω = 1 → เอกภพแบน (k = 0) สมดุลพอดี<br>• Ω &gt; 1 → ยุบตัวกลับ (Big Crunch)<br>• Ω &lt; 1 → ขยายตัวเปิด (Open)</p>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-cosmos-deep/85 border border-cosmos-gold/35">
+          <div class="font-display font-semibold text-cosmos-gold text-sm">2. กฎการกระจัดของวีน &amp; อุณหภูมิ CMB</div>
+          <div class="font-sci text-[11px] bg-black/50 p-2 rounded-lg mt-1 text-cosmos-gold">λ_max · T = b  ⇒  λ_max = (2.898×10⁻³) / T<br>T(z) = T₀(1 + z) ,  T ∝ 1/a(t)</div>
+          <p class="text-slate-300 mt-1.5">แปลงเมตรเป็นมิลลิเมตรโดยคูณ 1,000 (สำหรับ T₀ = 2.725 K จะได้ ≈ 1.06 mm)</p>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-cosmos-deep/85 border border-cosmos-cyan/35">
+          <div class="font-display font-semibold text-cosmos-cyan text-sm">3. มอดูลัสระยะทาง &amp; กฎกำลังสองผกผัน</div>
+          <div class="font-sci text-[11px] bg-black/50 p-2 rounded-lg mt-1 text-cosmos-cyan">m − M = 5 log₁₀(d_pc) − 5<br>F = L / (4πd²)</div>
+          <p class="text-slate-300 mt-1.5">• หา log₁₀(d_pc) = (m − M + 5) / 5 แล้วใช้ 10ˣ<br>• ระยะทางไกลขึ้น n เท่า ความสว่างลดลง n² เท่า</p>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-cosmos-deep/85 border border-cosmos-plasma/35">
+          <div class="font-display font-semibold text-cosmos-plasma text-sm">4. เรดชิฟต์, กฎฮับเบิล &amp; อายุเอกภพ</div>
+          <div class="font-sci text-[11px] bg-black/50 p-2 rounded-lg mt-1 text-cosmos-plasma">z = Δλ / λ₀ ≈ v / c<br>v = H₀ · d  |  t_H (Gyr) ≈ 977.8 / H₀</div>
+          <p class="text-slate-300 mt-1.5">ความชันกราฟ v กับ d คือ H₀ (km/s/Mpc) ใช้ประมาณอายุเอกภพได้ ≈ 13.8 พันล้านปี</p>
+        </div>
+      </div>
+
+      <!-- Tab 2: Scientific Calculator -->
+      <div id="panel-calc" class="hidden flex-1 p-4 flex-col justify-between">
+        <div>
+          <div class="bg-black/70 border border-cosmos-cyan/50 rounded-2xl p-3 mb-2.5 text-right">
+            <div id="calc-expr" class="font-sci text-xs text-slate-400 min-h-[1.1rem] truncate"></div>
+            <div id="calc-display" class="font-sci text-2xl font-bold text-cosmos-plasma truncate">0</div>
+          </div>
+
+          <!-- Physics Constants Row -->
+          <div class="grid grid-cols-4 gap-1.5 mb-2 text-[10px] font-sci">
+            <button data-calc="c_val" class="calc-btn py-2 rounded-xl bg-cosmos-cyan/20 border border-cosmos-cyan/45 text-cosmos-cyan font-bold active:scale-95">c(3e5)</button>
+            <button data-calc="b_val" class="calc-btn py-2 rounded-xl bg-cosmos-gold/20 border border-cosmos-gold/45 text-cosmos-gold font-bold active:scale-95">b(2.898e-3)</button>
+            <button data-calc="h_age" class="calc-btn py-2 rounded-xl bg-cosmos-plasma/20 border border-cosmos-plasma/45 text-cosmos-plasma font-bold active:scale-95">977.8÷x</button>
+            <button data-calc="C" class="calc-btn py-2 rounded-xl bg-rose-600/45 border border-rose-400/60 text-white font-bold active:scale-95">AC</button>
+          </div>
+
+          <!-- Scientific Functions Row -->
+          <div class="grid grid-cols-4 gap-1.5 mb-2 text-xs font-sci">
+            <button data-calc="log10" class="calc-btn py-2.5 rounded-xl bg-cosmos-magenta/25 border border-cosmos-magenta/50 text-cosmos-gold font-bold active:scale-95">log₁₀</button>
+            <button data-calc="pow10" class="calc-btn py-2.5 rounded-xl bg-cosmos-magenta/25 border border-cosmos-magenta/50 text-cosmos-gold font-bold active:scale-95">10ˣ</button>
+            <button data-calc="e" class="calc-btn py-2.5 rounded-xl bg-cosmos-violet/35 border border-purple-400/50 text-purple-200 font-bold active:scale-95">×10^</button>
+            <button data-calc="DEL" class="calc-btn py-2.5 rounded-xl bg-slate-700/90 border border-slate-500 text-amber-300 font-bold active:scale-95">⌫</button>
+          </div>
+
+          <!-- Standard Keypad -->
+          <div class="grid grid-cols-4 gap-1.5 text-base font-sci">
+            <button data-calc="7" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">7</button>
+            <button data-calc="8" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">8</button>
+            <button data-calc="9" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">9</button>
+            <button data-calc="/" class="calc-btn py-2.5 rounded-xl bg-indigo-800/80 border border-indigo-400/50 text-cosmos-cyan active:scale-95">÷</button>
+
+            <button data-calc="4" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">4</button>
+            <button data-calc="5" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">5</button>
+            <button data-calc="6" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">6</button>
+            <button data-calc="*" class="calc-btn py-2.5 rounded-xl bg-indigo-800/80 border border-indigo-400/50 text-cosmos-cyan active:scale-95">×</button>
+
+            <button data-calc="1" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">1</button>
+            <button data-calc="2" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">2</button>
+            <button data-calc="3" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">3</button>
+            <button data-calc="-" class="calc-btn py-2.5 rounded-xl bg-indigo-800/80 border border-indigo-400/50 text-cosmos-cyan active:scale-95">−</button>
+
+            <button data-calc="0" class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">0</button>
+            <button data-calc="." class="calc-btn py-2.5 rounded-xl bg-slate-800/90 border border-slate-600 text-white active:scale-95">.</button>
+            <button data-calc="=" class="calc-btn col-span-1 py-2.5 rounded-xl btn-cyan text-base active:scale-95">=</button>
+            <button data-calc="+" class="calc-btn py-2.5 rounded-xl bg-indigo-800/80 border border-indigo-400/50 text-cosmos-cyan active:scale-95">+</button>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-400 text-center mt-2">
+          ทิป: พิมพ์ค่า H₀ แล้วกด <b>977.8÷x</b> เพื่อคำนวณอายุเอกภพ (พันล้านปี) หรือพิมพ์เลขชี้กำลังแล้วกด <b>10ˣ</b> ได้ทันที
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 7. GRAND FINALE: STAR-LORD OF COSMOLOGY CERTIFICATE                   -->
+  <!-- ===================================================================== -->
+  <div id="certificate-screen" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-cosmos-bg/92 backdrop-blur-lg overflow-y-auto">
+    <div class="w-full max-w-md holo-panel-gold rounded-3xl p-5 sm:p-6 my-auto">
+      <div class="text-center">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-cosmos-gold via-cosmos-magenta to-cosmos-cyan text-3xl shadow-lg mb-2">
+          🌌
+        </div>
+        <div class="font-sci text-[10px] tracking-widest text-cosmos-gold uppercase">Star-Lord of Cosmology • Mission Complete</div>
+        <h2 class="font-display text-xl sm:text-2xl font-bold text-white mt-0.5">ใบรับรองผู้พิทักษ์เอกภพ</h2>
+      </div>
+
+      <div class="mt-3 p-3.5 rounded-2xl bg-cosmos-deep/90 border border-cosmos-cyan/40 text-center">
+        <div class="text-xs text-slate-300">ขอมอบให้แก่กัปตัน</div>
+        <div id="cert-name" class="font-display text-lg font-bold text-cosmos-cyan mt-0.5">นักจักรวาลวิทยา ม.6</div>
+        <div class="inline-block mt-1.5 px-3 py-0.5 rounded-full bg-cosmos-violet/40 border border-purple-400/60 font-sci text-[11px] text-cosmos-gold">
+          ✓ 9 / 9 COSMIC EPOCHS UNLOCKED
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-white/15">
+          <div>
+            <div class="text-[10px] text-slate-400">ระดับยศ</div>
+            <div id="cert-rank" class="font-sci text-xl font-black text-cosmos-gold">S</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">คะแนนรวม</div>
+            <div id="cert-score" class="font-sci text-base font-bold text-cosmos-plasma mt-0.5">0</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">เกราะคงเหลือ</div>
+            <div id="cert-shield" class="font-sci text-base font-bold text-cosmos-cyan mt-0.5">100%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 Mastered Equations Summary -->
+      <div class="mt-3 space-y-1.5 text-xs">
+        <div class="font-display font-semibold text-cosmos-gold">สรุป 4 สมการสำคัญ &amp; 9 ยุควิวัฒนาการที่พิชิตได้:</div>
+        <div class="flex justify-between items-center px-3 py-1.5 rounded-xl bg-cosmos-deep/80 border border-cosmos-magenta/35">
+          <span class="font-display text-cosmos-magenta font-semibold">1. ฟรีดแมน</span>
+          <span class="font-sci text-[10px] text-white">Ω = Ωₘ + Ω_Λ = 1 (k = 0)</span>
+        </div>
+        <div class="flex justify-between items-center px-3 py-1.5 rounded-xl bg-cosmos-deep/80 border border-cosmos-gold/35">
+          <span class="font-display text-cosmos-gold font-semibold">2. กฎของวีน</span>
+          <span class="font-sci text-[10px] text-white">λ_max = b/T ≈ 1.06 mm</span>
+        </div>
+        <div class="flex justify-between items-center px-3 py-1.5 rounded-xl bg-cosmos-deep/80 border border-cosmos-cyan/35">
+          <span class="font-display text-cosmos-cyan font-semibold">3. เทียนมาตรฐาน</span>
+          <span class="font-sci text-[10px] text-white">m−M = 5log(d)−5 , F∝1/d²</span>
+        </div>
+        <div class="flex justify-between items-center px-3 py-1.5 rounded-xl bg-cosmos-deep/80 border border-cosmos-plasma/35">
+          <span class="font-display text-cosmos-plasma font-semibold">4. กฎของฮับเบิล</span>
+          <span class="font-sci text-[10px] text-white">v = H₀·d , t ≈ 13.8 Gyr</span>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button id="btn-download-cert" class="py-3 px-3 rounded-2xl text-sm btn-cyan active:scale-95">
+          💾 บันทึกใบรับรอง (PNG)
+        </button>
+        <button id="btn-replay" class="py-3 px-3 rounded-2xl text-sm btn-guardian active:scale-95">
+          🔄 เล่นใหม่อีกครั้ง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT ENGINE: 9-EPOCH CODEX + SYNTHWAVE + THREE.JS + MISSIONS    -->
+  <!-- ===================================================================== -->
+  <script>
+    /*************************************************************************
+     * 1. COMPLETE 9-EPOCH COSMIC EVOLUTION DATA (IPST GRADE 12 CURRICULUM)
+     *************************************************************************/
+    const EPOCHS = [
+      {
+        id: 1,
+        short: 'เอกฐาน',
+        icon: '✨',
+        name: 'ภาวะเอกฐาน (Singularity)',
+        time: 't = 0 วินาที',
+        temp: '∞ K (สูงเป็นอนันต์)',
+        particles: 'พลังงานบริสุทธิ์รวมเป็นหนึ่งเดียว',
+        color: '#ff2e97',
+        desc: 'จุดเริ่มต้นของกาลอวกาศ (Spacetime) สสารและพลังงานทั้งหมดในเอกภพอัดแน่นอยู่ในจุดที่มีความหนาแน่นและอุณหภูมิสูงมหาศาล ก่อนเกิดบิกแบง'
+      },
+      {
+        id: 2,
+        short: 'พองตัว',
+        icon: '💥',
+        name: 'ยุคการพองตัว (Cosmic Inflation)',
+        time: '10⁻³⁶ – 10⁻³² วินาที',
+        temp: '~10²⁷ K',
+        particles: 'ควาร์ก, อิเล็กตรอน, โฟตอน, ปฏิอนุภาค',
+        color: '#ffd166',
+        desc: 'อวกาศขยายตัวอย่างก้าวกระโดดเร็วกว่าความเร็วแสง (การขยายตัวของกาลอวกาศเอง) ทำให้เอกภพมีเรขาคณิตแบนราบ (k = 0) และเกิดอนุภาคมูลฐานแรกเริ่ม'
+      },
+      {
+        id: 3,
+        short: 'ควาร์ก',
+        icon: '⚛️',
+        name: 'ยุคอนุภาคมูลฐาน (Quark-Hadron Epoch)',
+        time: '10⁻⁶ วินาที',
+        temp: '~10¹² K',
+        particles: 'โปรตอน (p⁺), นิวตรอน (n⁰), อิเล็กตรอน (e⁻)',
+        color: '#c77dff',
+        desc: 'เอกภพเย็นลงจนควาร์กสามารถจับตัวกันเป็นโปรตอนและนิวตรอน เกิดการประลัย (Annihilation) ระหว่างสสารและปฏิสสาร แต่มีสสารเหลือรอดเล็กน้อยเป็นรากฐานของเอกภพ'
+      },
+      {
+        id: 4,
+        short: 'นิวเคลียส',
+        icon: '🧬',
+        name: 'ยุคสังเคราะห์นิวเคลียส (Big Bang Nucleosynthesis)',
+        time: '3 นาทีหลังบิกแบง',
+        temp: '~10⁹ K',
+        particles: 'นิวเคลียส H (~75%) และ He (~25%) โดยมวล',
+        color: '#00f5d4',
+        desc: 'โปรตอนและนิวตรอนหลอมรวมกันด้วยปฏิกิริยานิวเคลียร์ฟิวชัน เกิดเป็นนิวเคลียสของธาตุเบา คือ ไฮโดรเจนประมาณ 75% และฮีเลียมประมาณ 25% โดยมวล (ยังไม่เป็นอะตอมที่เป็นกลาง)'
+      },
+      {
+        id: 5,
+        short: 'แสงแรก',
+        icon: '📡',
+        name: 'ยุครีคอมบิเนชันและแสงแรก (Recombination & CMB)',
+        time: '380,000 ปีหลังบิกแบง',
+        temp: '~3,000 K',
+        particles: 'อะตอม H/He ที่เป็นกลาง + โฟตอนอิสระ (CMB)',
+        color: '#ff9f1c',
+        desc: 'เอกภพเย็นลงเหลือประมาณ 3,000 K อิเล็กตรอนเข้าจับกับนิวเคลียสเกิดเป็นอะตอมที่เป็นกลาง หมอกพลาสมาจางหาย เอกภพโปร่งแสงและปลดปล่อยแสงแรกที่ปัจจุบันคือรังสีไมโครเวฟพื้นหลัง (CMB)'
+      },
+      {
+        id: 6,
+        short: 'ดาวรุ่นแรก',
+        icon: '🌟',
+        name: 'ยุคมืดและดาวฤกษ์รุ่นแรก (Dark Ages & Cosmic Dawn)',
+        time: '100 – 400 ล้านปี',
+        temp: '~60 – 20 K',
+        particles: 'กลุ่มแก๊ส H/He → ดาวฤกษ์รุ่นแรก (Population III)',
+        color: '#38bdf8',
+        desc: 'หลังยุคแสงแรกเอกภพเข้าสู่ยุคมืด ก่อนที่แรงโน้มถ่วงจะดึงกลุ่มแก๊สไฮโดรเจนและฮีเลียมให้ยุบตัวจนเกิดปฏิกิริยาฟิวชัน จุดประกายดาวฤกษ์รุ่นแรกขนาดยักษ์สีฟ้าขาวที่สว่างจ้า'
+      },
+      {
+        id: 7,
+        short: 'กาแล็กซี',
+        icon: '🌀',
+        name: 'ยุคก่อตัวของกาแล็กซี (Galaxy Formation)',
+        time: '1 พันล้านปีหลังบิกแบง',
+        temp: '~15 K',
+        particles: 'กาแล็กซี, ซูเปอร์โนวา, ธาตุหนัก (C, O, Fe)',
+        color: '#ff2e97',
+        desc: 'ดาวฤกษ์และกลุ่มแก๊สรวมตัวกันเป็นกาแล็กซีขนาดใหญ่ ดาวฤกษ์มวลมากสิ้นอายุขัยเกิดการระเบิดซูเปอร์โนวา สังเคราะห์และกระจายธาตุหนัก (คาร์บอน ออกซิเจน เหล็ก) สู่อวกาศ'
+      },
+      {
+        id: 8,
+        short: 'ระบบสุริยะ',
+        icon: '🪐',
+        name: 'กำเนิดระบบสุริยะ (Solar System Birth)',
+        time: '9.2 พันล้านปี (4.6 พันล้านปีก่อน)',
+        temp: '~4 K',
+        particles: 'เนบิวลาสุริยะ → ดวงอาทิตย์, โลก, ดาวเคราะห์',
+        color: '#ffd166',
+        desc: 'กลุ่มแก๊สและฝุ่นธาตุหนักจากซูเปอร์โนวารุ่นก่อน (เนบิวลาสุริยะ) ยุบตัวลงภายใต้แรงโน้มถ่วง ก่อกำเนิดดวงอาทิตย์ โลก และดาวเคราะห์ในระบบสุริยะของเรา'
+      },
+      {
+        id: 9,
+        short: 'ปัจจุบัน',
+        icon: '🌌',
+        name: 'เอกภพปัจจุบัน (Present Universe)',
+        time: '13.8 พันล้านปี',
+        temp: '2.725 K (อุณหภูมิ CMB)',
+        particles: 'สสารปกติ 5%, สสารมืด 27%, พลังงานมืด 68%',
+        color: '#38f9a8',
+        desc: 'เอกภพกำลังขยายตัวออกไปด้วยความเร่งภายใต้แรงผลักของพลังงานมืด (Dark Energy) โดยกาแล็กซีที่อยู่ไกลจะเคลื่อนที่ถอยห่างเร็วขึ้นตามกฎของฮับเบิล-เลอแมทร์'
+      }
+    ];
+
+    /*************************************************************************
+     * 2. PROCEDURAL GUARDIANS SYNTHWAVE AUDIO & NATURAL THAI TTS ENGINE
+     *************************************************************************/
+    const CosmicAudio = {
+      ctx: null,
+      musicOn: true,
+      voiceOn: true,
+      loopTimer: null,
+      stepIndex: 0,
+      masterGain: null,
+      typeTimer: null,
+
+      init() {
+        try {
+          if (!this.ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) {
+              this.ctx = new AC();
+              this.masterGain = this.ctx.createGain();
+              this.masterGain.gain.value = 0.26;
+              this.masterGain.connect(this.ctx.destination);
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        } catch (e) {}
+      },
+
+      startMusic() {
+        this.init();
+        if (!this.ctx || !this.musicOn || this.loopTimer) return;
+
+        const bassProg = [
+          110.0, 110.0, 164.81, 110.0,
+          87.31, 87.31, 130.81, 87.31,
+          130.81, 130.81, 196.0, 130.81,
+          98.0, 98.0, 146.83, 123.47
+        ];
+        const arpNotes = [
+          440, 523.25, 659.25, 523.25,
+          349.23, 440, 523.25, 440,
+          523.25, 659.25, 783.99, 659.25,
+          392.0, 493.88, 587.33, 493.88
+        ];
+        const padChords = [
+          [220, 261.63, 329.63],
+          [174.61, 220, 261.63],
+          [261.63, 329.63, 392.0],
+          [196.0, 246.94, 293.66]
+        ];
+
+        this.loopTimer = setInterval(() => {
+          if (!this.musicOn || !this.ctx || this.ctx.state !== 'running') return;
+          const now = this.ctx.currentTime;
+          const i = this.stepIndex % 16;
+
+          this.playNote(bassProg[i], 0.19, 'sawtooth', 0.11, 420, now);
+          if (i % 2 === 0 || i % 4 === 3) {
+            this.playNote(arpNotes[i], 0.16, 'triangle', 0.06, 1900, now);
+          }
+          if (i % 4 === 0) {
+            padChords[Math.floor(i / 4)].forEach(f => this.playPad(f, 0.85, 0.03, now));
+          }
+          this.stepIndex++;
+        }, 215);
+      },
+
+      stopMusic() {
+        if (this.loopTimer) {
+          clearInterval(this.loopTimer);
+          this.loopTimer = null;
+        }
+      },
+
+      toggleMusic() {
+        this.musicOn = !this.musicOn;
+        if (this.musicOn) this.startMusic();
+        else this.stopMusic();
+        this.syncAudioUI();
+      },
+
+      toggleVoice() {
+        this.voiceOn = !this.voiceOn;
+        if (!this.voiceOn) this.stopSpeech();
+        this.syncAudioUI();
+      },
+
+      syncAudioUI() {
+        const mixBtn = document.getElementById('btn-cosmic-mix');
+        const vBtn = document.getElementById('btn-voice-toggle');
+        if (mixBtn) {
+          mixBtn.textContent = this.musicOn ? '🎵 MIX' : '🔇 MIX';
+          mixBtn.classList.toggle('opacity-60', !this.musicOn);
+        }
+        if (vBtn) vBtn.textContent = this.voiceOn ? '🔊' : '🔇';
+      },
+
+      playNote(freq, dur, type, vol, cutoff, startTime) {
+        try {
+          const osc = this.ctx.createOscillator();
+          const flt = this.ctx.createBiquadFilter();
+          const g = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, startTime);
+          flt.type = 'lowpass';
+          flt.frequency.setValueAtTime(cutoff, startTime);
+          g.gain.setValueAtTime(0.001, startTime);
+          g.gain.linearRampToValueAtTime(vol, startTime + 0.015);
+          g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+          osc.connect(flt); flt.connect(g); g.connect(this.masterGain);
+          osc.start(startTime);
+          osc.stop(startTime + dur + 0.02);
+        } catch (e) {}
+      },
+
+      playPad(freq, dur, vol, startTime) {
+        try {
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+          g.gain.setValueAtTime(0.001, startTime);
+          g.gain.linearRampToValueAtTime(vol, startTime + 0.25);
+          g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+          osc.connect(g); g.connect(this.masterGain);
+          osc.start(startTime);
+          osc.stop(startTime + dur + 0.03);
+        } catch (e) {}
+      },
+
+      sfxTone(f1, f2, dur, type = 'triangle', vol = 0.2) {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(f1, now);
+          if (f2) osc.frequency.exponentialRampToValueAtTime(f2, now + dur);
+          g.gain.setValueAtTime(vol, now);
+          g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + dur + 0.02);
+        } catch (e) {}
+      },
+
+      click() { this.sfxTone(780, 1060, 0.06, 'triangle', 0.1); },
+      typeTick() { this.sfxTone(1260, 1100, 0.02, 'sine', 0.022); },
+      lockBeep() {
+        this.sfxTone(880, 1320, 0.09, 'sine', 0.14);
+        setTimeout(() => this.sfxTone(1320, 1760, 0.12, 'sine', 0.14), 95);
+      },
+      fanfare() {
+        this.sfxTone(523.25, 523.25, 0.11, 'triangle', 0.17);
+        setTimeout(() => this.sfxTone(659.25, 659.25, 0.11, 'triangle', 0.17), 105);
+        setTimeout(() => this.sfxTone(783.99, 783.99, 0.13, 'triangle', 0.19), 210);
+        setTimeout(() => this.sfxTone(1046.5, 1046.5, 0.32, 'triangle', 0.21), 320);
+      },
+      shieldHit() {
+        this.sfxTone(185, 92, 0.22, 'sawtooth', 0.19);
+        setTimeout(() => this.sfxTone(145, 78, 0.22, 'sawtooth', 0.17), 135);
+      },
+      warpJump() {
+        this.init();
+        if (!this.ctx) return;
+        this.sfxTone(140, 920, 0.72, 'sawtooth', 0.15);
+        setTimeout(() => this.sfxTone(920, 160, 0.62, 'sine', 0.17), 520);
+      },
+      bigBangBoom() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          this.sfxTone(120, 28, 1.3, 'sawtooth', 0.26);
+          const bufLen = Math.floor(this.ctx.sampleRate * 1.1);
+          const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < bufLen; i++) {
+            d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.34));
+          }
+          const src = this.ctx.createBufferSource();
+          src.buffer = buf;
+          const flt = this.ctx.createBiquadFilter();
+          flt.type = 'lowpass';
+          flt.frequency.setValueAtTime(1100, this.ctx.currentTime);
+          flt.frequency.exponentialRampToValueAtTime(95, this.ctx.currentTime + 1.1);
+          const g = this.ctx.createGain();
+          g.gain.setValueAtTime(0.28, this.ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.1);
+          src.connect(flt); flt.connect(g); g.connect(this.ctx.destination);
+          src.start();
+        } catch (e) {}
+      },
+
+      stopSpeech() {
+        if ('speechSynthesis' in window) {
+          try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
+      },
+
+      speakNaturalThai(spokenThai) {
+        if (!this.voiceOn || !('speechSynthesis' in window) || !spokenThai) return;
+        try {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(spokenThai);
+          utter.lang = 'th-TH';
+          utter.rate = 0.96;
+          utter.pitch = 1.02;
+          const voices = window.speechSynthesis.getVoices();
+          const thVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes('th'));
+          if (thVoice) utter.voice = thVoice;
+          window.speechSynthesis.speak(utter);
+        } catch (e) {}
+      },
+
+      novaComm(displayText, spokenThai = null, targetElId = 'nova-comm-text', showBar = true) {
+        if (showBar) document.getElementById('nova-comm-bar').classList.remove('hidden');
+        const el = document.getElementById(targetElId);
+        if (!el) return;
+
+        clearInterval(this.typeTimer);
+        el.textContent = '';
+        let idx = 0;
+        this.typeTimer = setInterval(() => {
+          idx += 2;
+          el.textContent = displayText.slice(0, idx);
+          if (idx % 6 === 0) this.typeTick();
+          if (idx >= displayText.length) {
+            el.textContent = displayText;
+            clearInterval(this.typeTimer);
+          }
+        }, 22);
+
+        if (spokenThai) this.speakNaturalThai(spokenThai);
+      }
+    };
+
+    function showToast(msg, type = 'info') {
+      const box = document.getElementById('toast-container');
+      const cls = {
+        info: 'bg-cosmos-deep/95 border-cosmos-cyan/60 text-cosmos-cyan',
+        success: 'bg-emerald-950/95 border-cosmos-plasma/70 text-cosmos-plasma',
+        error: 'bg-rose-950/95 border-cosmos-magenta/80 text-rose-200',
+        gold: 'bg-amber-950/95 border-cosmos-gold/80 text-cosmos-gold'
+      };
+      const el = document.createElement('div');
+      el.className = `px-4 py-2 rounded-2xl border text-xs sm:text-sm font-display font-medium shadow-2xl backdrop-blur-md transition-all duration-300 opacity-0 -translate-y-2 ${cls[type] || cls.info}`;
+      el.textContent = msg;
+      box.appendChild(el);
+      requestAnimationFrame(() => el.classList.remove('opacity-0', '-translate-y-2'));
+      setTimeout(() => {
+        el.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => el.remove(), 300);
+      }, 2700);
+    }
+
+    /*************************************************************************
+     * 3. GLOBAL GAME STATE & RANDOMIZED PUZZLE GENERATOR
+     *************************************************************************/
+    const State = {
+      mode: 'start',       // 'start' | 'intro' | 'playing' | 'complete'
+      phase: 'stage1',     // 'stage1' | 'bridge1' | 'stage2' | 'bridge2' | 'stage3' | 'bridge3' | 'stage4'
+      pilotName: 'นักจักรวาลวิทยา ม.6',
+      arMode: false,
+      gyroEnabled: false,
+      shield: 100,
+      score: 0,
+      combo: 1,
+      introIdx: 0,
+      dockCollapsed: false,
+
+      // 9-Epoch Evolution Progression
+      unlockedEpochs: new Set([1]),
+      activeEpoch: 1,
+      codexSelectedId: 1,
+
+      // Stage 1: Singularity & Friedmann
+      s1Ignited: false,
+      s1Charge: 0,
+      s1OmegaM: 0.30,
+      s1OmegaL: 0.20,
+
+      // Bridge 1: Quark-Hadron & Nucleosynthesis
+      b1Fused: false,
+
+      // Stage 2: Recombination & CMB
+      s2Scale: 0,
+      s2Cleared: false,
+      s2WienSolved: false,
+
+      // Bridge 2: Dark Ages & First Stars
+      b2Collapsed: false,
+
+      // Stage 3: Standard Candles
+      s3Targets: [],
+      s3LockedSet: new Set(),
+      s3SolvedSet: new Set(),
+      s3ActiveIdx: -1,
+      s3AimedIdx: -1,
+      s3BonusDone: false,
+
+      // Stage 4: Redshift & Hubble's Law
+      s4H0True: 70,
+      s4Galaxies: [],
+      s4SelectedId: -1,
+      s4Plotted: new Set(),
+      s4HubbleSolved: false
+    };
+
+    function initRandomizedPuzzles() {
+      // Stage 1: clean randomized Omega_m
+      const omChoices = [0.25, 0.30, 0.35];
+      State.s1OmegaM = omChoices[Math.floor(Math.random() * omChoices.length)];
+      State.s1OmegaL = 0.20;
+
+      // Stage 3: 2 Supernovae with clean solvable Distance Modulus (1 Mpc = 10^6 pc)
+      // Set A: m=11, M=-19 => d=10 Mpc | Set B: m=16, M=-19 => d=100 Mpc
+      // Or m=6, M=-19 => d=1 Mpc | m=11, M=-19 => d=10 Mpc
+      const pair = Math.random() > 0.5
+        ? [{ m: 11, M: -19, dMpc: 10 }, { m: 16, M: -19, dMpc: 100 }]
+        : [{ m: 6, M: -19, dMpc: 1 }, { m: 16, M: -19, dMpc: 100 }];
+      State.s3Targets = [
+        { id: 0, name: 'SN-2026A (เนบิวลาซ้าย)', ...pair[0], color: 0x00f5d4, x: -5.5, y: 1.4, z: -14 },
+        { id: 1, name: 'SN-2026B (เนบิวลาขวา)',  ...pair[1], color: 0xff2e97, x: 5.5,  y: 0.8, z: -15 }
+      ];
+
+      // Stage 4: clean randomized H0 (68, 70, or 72 km/s/Mpc)
+      const h0Pool = [68, 70, 72];
+      const H0 = h0Pool[Math.floor(Math.random() * h0Pool.length)];
+      State.s4H0True = H0;
+      // lambda0 = 600 nm, c = 300,000 km/s => v = 500 * dLam => dLam = (H0 * d) / 500
+      // Use d = 100, 200, 300 Mpc so dLam = H0/5 * (1, 2, 3) -> clean decimals!
+      const makeG = (id, name, d, color, x, y, z) => {
+        const v = H0 * d;
+        const dLam = Number(((v * 600) / 300000).toFixed(1));
+        return { id, name, d, dLam, v, color, x, y, z };
+      };
+      State.s4Galaxies = [
+        makeG(0, 'Alpha', 100, 0x00f5d4, -6.2, 1.0, -15),
+        makeG(1, 'Beta',  200, 0xff2e97,  0.0, 1.8, -19),
+        makeG(2, 'Gamma', 300, 0xffd166,  6.4, 0.8, -23)
+      ];
+    }
+
+    function unlockEpochs(ids, activeId) {
+      ids.forEach(id => State.unlockedEpochs.add(id));
+      if (activeId) State.activeEpoch = activeId;
+      renderEpochTimeline();
+    }
+
+    function addScore(basePts) {
+      const gained = basePts * State.combo;
+      State.score += gained;
+      State.combo = Math.min(4, State.combo + 1);
+      updateTelemetryHUD();
+      showToast(`+${gained} คะแนน! (Combo x${State.combo})`, 'gold');
+    }
+
+    function restoreShield(amount) {
+      State.shield = Math.min(100, State.shield + amount);
+      updateTelemetryHUD();
+      showToast(`🛡️ ฟื้นฟูเกราะยาน +${amount}% (รวม ${State.shield}%)`, 'success');
+    }
+
+    function damageShield(amount, physicsExplanation) {
+      CosmicAudio.shieldHit();
+      State.shield = Math.max(10, State.shield - amount);
+      State.combo = 1;
+      updateTelemetryHUD();
+
+      const dmg = document.getElementById('damage-overlay');
+      dmg.style.opacity = '1';
+      document.body.classList.add('shake-hit');
+      setTimeout(() => { dmg.style.opacity = '0'; }, 420);
+      setTimeout(() => { document.body.classList.remove('shake-hit'); }, 500);
+
+      showInfoModal({
+        badge: `⚠️ เกราะยานลดลง -${amount}% (PHYSICS INSIGHT)`,
+        title: 'วิเคราะห์ข้อผิดพลาดทางฟิสิกส์',
+        bodyHtml: `
+          <div class="p-3 rounded-2xl bg-rose-950/75 border border-cosmos-magenta/60 text-rose-100">
+            ${physicsExplanation}
+          </div>
+          <p class="text-xs text-slate-300">เปิด <b>📖 สูตร</b> ด้านบนเพื่อใช้เครื่องคิดเลขวิทย์ช่วยคำนวณแล้วลองใหม่อีกครั้งนะกัปตัน!</p>
+        `,
+        btnText: 'รับทราบ! ลองคำนวณใหม่',
+        spokenThai: 'เกราะยานได้รับความเสียหายครับ ลองอ่านคำอธิบายทางฟิสิกส์แล้วคำนวณใหม่อีกครั้งนะครับ'
+      });
+    }
+
+    function updateTelemetryHUD() {
+      document.getElementById('hud-score').textContent = State.score;
+      document.getElementById('hud-combo').textContent = `x${State.combo}`;
+      document.getElementById('hud-shield-text').textContent = `${State.shield}%`;
+      const bar = document.getElementById('hud-shield-bar');
+      bar.style.width = `${State.shield}%`;
+      bar.className = `h-full transition-all duration-300 ${
+        State.shield > 50
+          ? 'bg-gradient-to-r from-cosmos-plasma to-cosmos-cyan'
+          : (State.shield > 25 ? 'bg-gradient-to-r from-amber-500 to-yellow-300' : 'bg-gradient-to-r from-rose-600 to-pink-500')
+      }`;
+    }
+
+    /*************************************************************************
+     * 4. INTERACTIVE 9-EPOCH TIMELINE BAR & EVOLUTION CODEX MODAL
+     *************************************************************************/
+    function renderEpochTimeline() {
+      const container = document.getElementById('epoch-timeline-bar');
+      const countEl = document.getElementById('timeline-unlock-count');
+      if (!container) return;
+
+      if (countEl) {
+        countEl.textContent = `${State.unlockedEpochs.size} / 9 UNLOCKED`;
+      }
+
+      container.innerHTML = EPOCHS.map(ep => {
+        const unlocked = State.unlockedEpochs.has(ep.id);
+        const isActive = State.activeEpoch === ep.id;
+        return `
+          <button data-epoch-id="${ep.id}" class="shrink-0 flex items-center gap-1 px-2 py-1 rounded-xl border text-[10px] font-display transition active:scale-95 ${
+            isActive
+              ? 'bg-gradient-to-r from-cosmos-magenta/45 to-cosmos-gold/40 border-cosmos-gold text-white font-bold shadow-lg'
+              : (unlocked
+                  ? 'bg-cosmos-deep/90 border-cosmos-cyan/45 text-cosmos-cyan hover:border-cosmos-gold'
+                  : 'bg-slate-900/70 border-white/10 text-slate-500')
+          }">
+            <span>${unlocked ? ep.icon : '🔒'}</span>
+            <span>E${ep.id} ${ep.short}</span>
+          </button>
+        `;
+      }).join('');
+
+      container.querySelectorAll('[data-epoch-id]').forEach(btn => {
+        btn.onclick = () => {
+          CosmicAudio.click();
+          const id = Number(btn.dataset.epochId);
+          openEvolutionCodex(id);
+        };
+      });
+
+      // Auto-scroll active pill into view
+      const activeBtn = container.querySelector(`[data-epoch-id="${State.activeEpoch}"]`);
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+
+    function openEvolutionCodex(focusId = null) {
+      State.codexSelectedId = focusId || State.activeEpoch;
+      renderCodexContent();
+      const modal = document.getElementById('codex-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function renderCodexContent() {
+      const ep = EPOCHS.find(e => e.id === State.codexSelectedId) || EPOCHS[0];
+      const unlocked = State.unlockedEpochs.has(ep.id);
+
+      document.getElementById('codex-detail').innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 border"
+               style="background: ${ep.color}22; border-color: ${ep.color}88;">
+            ${ep.icon}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-sci text-[10px] px-2 py-0.5 rounded-full font-bold text-black" style="background:${ep.color}">
+                EPOCH ${ep.id} / 9
+              </span>
+              <span class="font-sci text-[11px] text-cosmos-gold">${ep.time}</span>
+              <span class="font-sci text-[10px] px-2 py-0.5 rounded bg-cosmos-deep border border-cosmos-cyan/40 text-cosmos-cyan">
+                🌡️ ${ep.temp}
+              </span>
+              ${unlocked
+                ? '<span class="text-[10px] font-display text-cosmos-plasma">✓ ปลดล็อกแล้ว</span>'
+                : '<span class="text-[10px] font-display text-slate-400">🔒 ล่วงหน้า (อ่านศึกษาได้)</span>'}
+            </div>
+            <h4 class="font-display font-bold text-base text-white mt-1">${ep.name}</h4>
+            <p class="text-xs sm:text-sm text-slate-200 mt-1 leading-relaxed">${ep.desc}</p>
+            <div class="mt-2 px-2.5 py-1.5 rounded-xl bg-black/50 border border-white/10 text-[11px]">
+              <span class="text-cosmos-cyan font-display font-semibold">อนุภาค/โครงสร้างเด่น:</span>
+              <span class="text-slate-200">${ep.particles}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const listEl = document.getElementById('codex-list');
+      listEl.innerHTML = EPOCHS.map(item => {
+        const isSel = item.id === State.codexSelectedId;
+        const isUnl = State.unlockedEpochs.has(item.id);
+        return `
+          <button data-codex-pick="${item.id}" class="text-left p-2.5 rounded-2xl border transition active:scale-98 ${
+            isSel
+              ? 'bg-cosmos-violet/35 border-cosmos-gold shadow-lg'
+              : (isUnl ? 'bg-cosmos-deep/85 border-cosmos-cyan/30 hover:border-cosmos-cyan' : 'bg-slate-950/70 border-white/10 opacity-75 hover:opacity-100')
+          }">
+            <div class="flex items-center justify-between">
+              <span class="font-display font-semibold text-xs text-white">${item.icon} E${item.id}: ${item.short}</span>
+              <span class="font-sci text-[9px] text-cosmos-gold">${item.time}</span>
+            </div>
+            <div class="text-[11px] text-slate-300 truncate mt-0.5">${item.name}</div>
+          </button>
+        `;
+      }).join('');
+
+      listEl.querySelectorAll('[data-codex-pick]').forEach(btn => {
+        btn.onclick = () => {
+          CosmicAudio.click();
+          State.codexSelectedId = Number(btn.dataset.codexPick);
+          renderCodexContent();
+        };
+      });
+    }
+
+    /*************************************************************************
+     * 5. AR CAMERA & GYROSCOPE / LOOK CONTROLS
+     *************************************************************************/
+    let arStream = null;
+    const Look = {
+      lon: 0, lat: 0,
+      targetLon: 0, targetLat: 0,
+      dragging: false, lastX: 0, lastY: 0,
+      gyroZero: null
+    };
+
+    function resetView() {
+      Look.targetLon = 0;
+      Look.targetLat = 0;
+      Look.gyroZero = null;
+    }
+
+    async function toggleARCamera(forceOn = null) {
+      const wantAR = forceOn !== null ? forceOn : !State.arMode;
+      const video = document.getElementById('ar-video');
+      const btn = document.getElementById('btn-ar-toggle');
+
+      if (!wantAR) {
+        if (arStream) {
+          arStream.getTracks().forEach(t => t.stop());
+          arStream = null;
+        }
+        video.srcObject = null;
+        video.style.display = 'none';
+        State.arMode = false;
+        if (nebulaBackdrop) nebulaBackdrop.visible = true;
+        if (btn) btn.textContent = '📷 AR';
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('อุปกรณ์นี้ไม่รองรับกล้องเว็บ ใช้โหมด 3D เนบิวลาแทนครับ', 'info');
+        return;
+      }
+      try {
+        arStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false
+        });
+        video.srcObject = arStream;
+        await video.play();
+        video.style.display = 'block';
+        State.arMode = true;
+        if (nebulaBackdrop) nebulaBackdrop.visible = false;
+        if (btn) btn.textContent = '🌌 3D';
+        showToast('เปิดกล้อง AR แล้ว! ส่องห้องเรียนดูวิวัฒนาการเอกภพ 3 มิติได้เลย', 'success');
+      } catch (e) {
+        showToast('ไม่ได้รับสิทธิ์กล้องหลัง กำลังแสดงผลโหมด 3D เนบิวลา', 'info');
+      }
+    }
+
+    function onGyroEvent(e) {
+      if (!State.gyroEnabled || e.alpha === null || e.beta === null) return;
+      if (Look.gyroZero === null) Look.gyroZero = e.alpha;
+      Look.targetLon = -(e.alpha - Look.gyroZero) * 0.75;
+      Look.targetLat = Math.max(-50, Math.min(50, (e.beta - 78) * 0.6));
+    }
+
+    async function toggleGyro() {
+      const btn = document.getElementById('btn-gyro-toggle');
+      if (State.gyroEnabled) {
+        State.gyroEnabled = false;
+        window.removeEventListener('deviceorientation', onGyroEvent);
+        btn.classList.remove('border-cosmos-plasma', 'bg-emerald-900/40');
+        showToast('ปิดไจโรสโคปแล้ว (ลากนิ้ว/เมาส์เพื่อหมุนดูได้)', 'info');
+        return;
+      }
+      try {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const p = await DeviceOrientationEvent.requestPermission();
+          if (p !== 'granted') return;
+        }
+        Look.gyroZero = null;
+        State.gyroEnabled = true;
+        window.addEventListener('deviceorientation', onGyroEvent);
+        btn.classList.add('border-cosmos-plasma', 'bg-emerald-900/40');
+        showToast('เปิดไจโรสโคปแล้ว! แพนมือถือมองรอบตัว 360° ได้เลย', 'success');
+      } catch (e) {
+        showToast('อุปกรณ์ไม่รองรับไจโร ใช้ลากนิ้ว/เมาส์แทนได้เลย', 'info');
+      }
+    }
+
+    /*************************************************************************
+     * 6. THREE.JS 3D GUARDIANS SCENE ENGINE (4 STAGES + 3 EVOLUTION BRIDGES)
+     *************************************************************************/
+    let scene, camera, renderer, clock;
+    let nebulaBackdrop, starfield, warpStreaks, jumpGateGroup;
+    let jumpGateActive = false, jumpGateProgress = 0, jumpGateCallback = null;
+
+    const sceneGroups = {};
+    // Stage 1
+    let s1Core, s1Grid, s1GridOrig, s1Burst, s1Expand = 0.08;
+    // Bridge 1 (Quark-Hadron -> H & He Nucleosynthesis)
+    let b1Nucleons = [], b1HeCluster, b1HCluster;
+    // Stage 2 (Plasma & CMB)
+    let s2PlasmaCloud, s2CMBOrb, s2CMBRing;
+    // Bridge 2 (Dark Ages -> First Stars Pop III)
+    let b2GasCloud, b2FirstStars = [];
+    // Stage 3 (Supernovae)
+    let s3Beacons = [];
+    // Bridge 3 (Solar System Birth)
+    let b3Sun, b3Planets = [];
+    // Stage 4 (Hubble Galaxies)
+    let s4Meshes = [];
+
+    const raycaster = new THREE.Raycaster();
+    const tapVec = new THREE.Vector2();
+
+    function createGlowTexture(hexColor, innerWhite = true) {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      g.addColorStop(0, innerWhite ? 'rgba(255,255,255,0.96)' : hexColor);
+      g.addColorStop(0.28, hexColor);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    }
+
+    function createCMBTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#034078';
+      ctx.fillRect(0, 0, 512, 256);
+      const colors = ['#00b4d8', '#00f5d4', '#38f9a8', '#ffd166', '#ff9f1c', '#ff2e97', '#1d4ed8'];
+      for (let i = 0; i < 540; i++) {
+        const x = Math.random() * 512, y = Math.random() * 256;
+        const r = 8 + Math.random() * 24;
+        const grd = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grd.addColorStop(0, colors[Math.floor(Math.random() * colors.length)]);
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalAlpha = 0.65;
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function createLabelSprite(text, strokeHex = '#00f5d4') {
+      const c = document.createElement('canvas');
+      c.width = 340; c.height = 96;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = 'rgba(10, 4, 28, 0.86)';
+      ctx.strokeStyle = strokeHex;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.roundRect(10, 14, 320, 68, 22);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px Kanit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 170, 49);
+
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+      spr.scale.set(5.0, 1.4, 1);
+      return spr;
+    }
+
+    function buildGuardiansNebula() {
+      const grp = new THREE.Group();
+      const palettes = ['#ff2e97', '#7b2cbf', '#00f5d4', '#ffd166', '#ec4899'];
+      const textures = palettes.map(col => createGlowTexture(col, false));
+      for (let i = 0; i < 44; i++) {
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: textures[i % textures.length],
+          transparent: true,
+          opacity: 0.23 + Math.random() * 0.16,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        }));
+        const r = 46 + Math.random() * 56;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        spr.position.set(r * Math.sin(ph) * Math.cos(th), r * Math.sin(ph) * Math.sin(th), r * Math.cos(ph));
+        const sc = 28 + Math.random() * 44;
+        spr.scale.set(sc, sc, 1);
+        grp.add(spr);
+      }
+      return grp;
+    }
+
+    function buildMultiColorStarfield() {
+      const geo = new THREE.BufferGeometry();
+      const count = 1800;
+      const pos = new Float32Array(count * 3);
+      const col = new Float32Array(count * 3);
+      const hues = [0x00f5d4, 0xff2e97, 0xffd166, 0xffffff, 0xc77dff];
+      for (let i = 0; i < count; i++) {
+        const r = 55 + Math.random() * 140;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i * 3]     = r * Math.sin(ph) * Math.cos(th);
+        pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+        pos[i * 3 + 2] = r * Math.cos(ph);
+        const c = new THREE.Color(hues[i % hues.length]);
+        col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      return new THREE.Points(geo, new THREE.PointsMaterial({
+        size: 1.05, vertexColors: true, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending
+      }));
+    }
+
+    function buildHexagonalJumpGate() {
+      const grp = new THREE.Group();
+      const radii = [2.2, 3.6, 5.2, 7.0];
+      const colors = [0xffd166, 0xff9f1c, 0x00f5d4, 0xff2e97];
+      radii.forEach((rad, i) => {
+        const hex = new THREE.Mesh(
+          new THREE.TorusGeometry(rad, 0.14 - i * 0.018, 8, 6),
+          new THREE.MeshBasicMaterial({ color: colors[i], transparent: true, opacity: 0.92 })
+        );
+        hex.position.z = -i * 1.4;
+        hex.rotation.z = Math.PI / 6;
+        grp.add(hex);
+      });
+
+      const lineGeo = new THREE.BufferGeometry();
+      const count = 180;
+      const pts = new Float32Array(count * 6);
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const rad = 2.5 + Math.random() * 14;
+        const z = -Math.random() * 45;
+        const x = Math.cos(a) * rad, y = Math.sin(a) * rad;
+        pts[i * 6] = x; pts[i * 6 + 1] = y; pts[i * 6 + 2] = z;
+        pts[i * 6 + 3] = x; pts[i * 6 + 4] = y; pts[i * 6 + 5] = z - 4.5;
+      }
+      lineGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+      warpStreaks = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.85 }));
+      grp.add(warpStreaks);
+
+      grp.position.set(0, 0.4, -14);
+      grp.visible = false;
+      return grp;
+    }
+
+    function triggerJumpGate(onComplete) {
+      CosmicAudio.warpJump();
+      resetView();
+      jumpGateActive = true;
+      jumpGateProgress = 0;
+      jumpGateCallback = onComplete;
+      jumpGateGroup.visible = true;
+      jumpGateGroup.scale.setScalar(0.15);
+
+      const flash = document.getElementById('flash-overlay');
+      flash.style.background = 'radial-gradient(circle, #ffffff 0%, #ffd166 45%, #ff2e97 100%)';
+      setTimeout(() => { flash.style.opacity = '0.9'; }, 900);
+      setTimeout(() => { flash.style.opacity = '0'; }, 1200);
+    }
+
+    function createSpiralGalaxy(hexColor, scale = 1.0, hasSupernova = false) {
+      const g = new THREE.Group();
+      const count = 560;
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      const col = new Float32Array(count * 3);
+      const armC = new THREE.Color(hexColor);
+      const coreC = new THREE.Color(0xfffbeb);
+
+      for (let i = 0; i < count; i++) {
+        const arm = i % 3;
+        const r = Math.pow(Math.random(), 1.3) * 3.8;
+        const ang = r * 1.6 + (arm * Math.PI * 2) / 3 + (Math.random() - 0.5) * 0.48;
+        pos[i * 3]     = Math.cos(ang) * r;
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 0.32 * (1 - r / 4.2);
+        pos[i * 3 + 2] = Math.sin(ang) * r;
+        const mix = armC.clone().lerp(coreC, Math.max(0, 1 - r / 1.9));
+        col[i * 3] = mix.r; col[i * 3 + 1] = mix.g; col[i * 3 + 2] = mix.b;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const disk = new THREE.Points(geo, new THREE.PointsMaterial({
+        size: 0.28, vertexColors: true, transparent: true, opacity: 0.96, blending: THREE.AdditiveBlending
+      }));
+      disk.rotation.x = 0.72;
+      g.add(disk);
+      g.userData.disk = disk;
+
+      g.add(new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff })));
+      const hit = new THREE.Mesh(new THREE.SphereGeometry(3.4, 12, 12), new THREE.MeshBasicMaterial({ visible: false }));
+      g.add(hit);
+      g.userData.hitMesh = hit;
+
+      if (hasSupernova) {
+        const sn = new THREE.Group();
+        sn.position.set(1.8, 0.5, 0.8);
+        sn.add(new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff })));
+        const snHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: createGlowTexture('#ffd166', true), transparent: true, blending: THREE.AdditiveBlending
+        }));
+        snHalo.scale.set(2.8, 2.8, 1);
+        sn.add(snHalo);
+        g.add(sn);
+        g.userData.supernova = sn;
+      }
+
+      g.scale.setScalar(scale);
+      return g;
+    }
+
+    function initThree() {
+      const container = document.getElementById('webgl-container');
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 450);
+      camera.position.set(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);
+      container.appendChild(renderer.domElement);
+
+      clock = new THREE.Clock();
+      scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+
+      nebulaBackdrop = buildGuardiansNebula();
+      scene.add(nebulaBackdrop);
+
+      starfield = buildMultiColorStarfield();
+      scene.add(starfield);
+
+      jumpGateGroup = buildHexagonalJumpGate();
+      scene.add(jumpGateGroup);
+
+      buildStage1Scene();
+      buildBridge1Scene();
+      buildStage2Scene();
+      buildBridge2Scene();
+      buildStage3Scene();
+      buildBridge3Scene();
+      buildStage4Scene();
+
+      let downX = 0, downY = 0;
+      container.addEventListener('pointerdown', e => {
+        Look.dragging = true;
+        Look.lastX = downX = e.clientX;
+        Look.lastY = downY = e.clientY;
+      });
+      window.addEventListener('pointermove', e => {
+        if (!Look.dragging) return;
+        const dx = e.clientX - Look.lastX;
+        const dy = e.clientY - Look.lastY;
+        Look.lastX = e.clientX;
+        Look.lastY = e.clientY;
+        Look.targetLon -= dx * 0.24;
+        Look.targetLat = Math.max(-50, Math.min(50, Look.targetLat + dy * 0.2));
+      });
+      window.addEventListener('pointerup', e => {
+        if (!Look.dragging) return;
+        Look.dragging = false;
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) < 10 && State.mode === 'playing') {
+          onSceneTap(e.clientX, e.clientY);
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+
+    function buildStage1Scene() {
+      const grp = new THREE.Group();
+      grp.position.set(0, 0.7, -13);
+
+      s1Core = new THREE.Group();
+      s1Core.add(new THREE.Mesh(new THREE.SphereGeometry(0.65, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffffff })));
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: createGlowTexture('#ff2e97', true), transparent: true, blending: THREE.AdditiveBlending
+      }));
+      glow.scale.set(5.2, 5.2, 1);
+      s1Core.add(glow);
+      s1Core.add(new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.05, 12, 6), new THREE.MeshBasicMaterial({ color: 0xffd166 })));
+      const r2 = new THREE.Mesh(new THREE.TorusGeometry(2.3, 0.04, 12, 64), new THREE.MeshBasicMaterial({ color: 0x00f5d4, transparent: true, opacity: 0.75 }));
+      r2.rotation.x = Math.PI / 2.2;
+      s1Core.add(r2);
+      grp.add(s1Core);
+
+      const gridGeo = new THREE.PlaneGeometry(22, 22, 20, 20);
+      s1GridOrig = new Float32Array(gridGeo.attributes.position.array);
+      s1Grid = new THREE.Mesh(gridGeo, new THREE.MeshBasicMaterial({ color: 0x00f5d4, wireframe: true, transparent: true, opacity: 0.75 }));
+      s1Grid.rotation.x = -Math.PI / 2.7;
+      s1Grid.position.y = -2.1;
+      s1Grid.visible = false;
+      grp.add(s1Grid);
+
+      const pGeo = new THREE.BufferGeometry();
+      const pos = new Float32Array(500 * 3);
+      const col = new Float32Array(500 * 3);
+      const hues = [0xff2e97, 0x00f5d4, 0xffd166, 0x7b2cbf];
+      for (let i = 0; i < 500; i++) {
+        const r = 1.5 + Math.random() * 10;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+        pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+        pos[i * 3 + 2] = r * Math.cos(ph);
+        const c = new THREE.Color(hues[i % hues.length]);
+        col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      }
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      pGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      s1Burst = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.3, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending }));
+      s1Burst.visible = false;
+      grp.add(s1Burst);
+
+      grp.visible = true;
+      sceneGroups.stage1 = grp;
+      scene.add(grp);
+    }
+
+    // Bridge 1: 3D Quarks -> Protons/Neutrons -> Fused H (75%) & He (25%) Nuclei
+    function buildBridge1Scene() {
+      const grp = new THREE.Group();
+      grp.position.set(0, 0.8, -12.5);
+      b1Nucleons = [];
+
+      // Free glowing protons (magenta) and neutrons (cyan) swirling
+      for (let i = 0; i < 16; i++) {
+        const isProton = i % 2 === 0;
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.42, 18, 18),
+          new THREE.MeshBasicMaterial({ color: isProton ? 0xff2e97 : 0x00f5d4 })
+        );
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: createGlowTexture(isProton ? '#ff2e97' : '#00f5d4', true),
+          transparent: true, blending: THREE.AdditiveBlending
+        }));
+        halo.scale.set(1.7, 1.7, 1);
+        m.add(halo);
+        m.userData = {
+          angle: (i / 16) * Math.PI * 2,
+          radius: 3.5 + (i % 3) * 1.4,
+          yOff: (Math.random() - 0.5) * 3.0,
+          speed: 0.8 + (i % 4) * 0.25
+        };
+        grp.add(m);
+        b1Nucleons.push(m);
+      }
+
+      // Fused Helium-4 nucleus (2p + 2n) on right
+      b1HeCluster = new THREE.Group();
+      b1HeCluster.position.set(3.2, 0.3, 0);
+      const offsets = [[0.35, 0.35, 0], [-0.35, -0.35, 0], [-0.35, 0.35, 0.35], [0.35, -0.35, -0.35]];
+      offsets.forEach((o, i) => {
+        const sph = new THREE.Mesh(
+          new THREE.SphereGeometry(0.55, 20, 20),
+          new THREE.MeshBasicMaterial({ color: i < 2 ? 0xff2e97 : 0x00f5d4 })
+        );
+        sph.position.set(o[0], o[1], o[2]);
+        b1HeCluster.add(sph);
+      });
+      const heLbl = createLabelSprite('He-4 (~25% โดยมวล)', '#ffd166');
+      heLbl.position.set(0, 2.2, 0);
+      b1HeCluster.add(heLbl);
+      b1HeCluster.visible = false;
+      grp.add(b1HeCluster);
+
+      // Fused Hydrogen nuclei (single protons) on left
+      b1HCluster = new THREE.Group();
+      b1HCluster.position.set(-3.2, 0.3, 0);
+      [[-1.1, 0.4, 0], [0.0, -0.6, 0.3], [1.1, 0.5, -0.2]].forEach(o => {
+        const p = new THREE.Mesh(new THREE.SphereGeometry(0.48, 20, 20), new THREE.MeshBasicMaterial({ color: 0xff2e97 }));
+        p.position.set(o[0], o[1], o[2]);
+        b1HCluster.add(p);
+      });
+      const hLbl = createLabelSprite('H-1 (~75% โดยมวล)', '#00f5d4');
+      hLbl.position.set(0, 2.2, 0);
+      b1HCluster.add(hLbl);
+      b1HCluster.visible = false;
+      grp.add(b1HCluster);
+
+      grp.visible = false;
+      sceneGroups.bridge1 = grp;
+      scene.add(grp);
+    }
+
+    function buildStage2Scene() {
+      const grp = new THREE.Group();
+      const pGeo = new THREE.BufferGeometry();
+      const count = 420;
+      const pos = new Float32Array(count * 3);
+      const col = new Float32Array(count * 3);
+      const plasmaHues = [0xff6b00, 0xff2e97, 0xffd166];
+      for (let i = 0; i < count; i++) {
+        const r = 4.5 + Math.random() * 14;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+        pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+        pos[i * 3 + 2] = r * Math.cos(ph);
+        const c = new THREE.Color(plasmaHues[i % plasmaHues.length]);
+        col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      }
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      pGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      s2PlasmaCloud = new THREE.Points(pGeo, new THREE.PointsMaterial({
+        size: 1.5, map: createGlowTexture('#ff5e00', false), vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending
+      }));
+      grp.add(s2PlasmaCloud);
+
+      s2CMBOrb = new THREE.Mesh(
+        new THREE.SphereGeometry(3.7, 40, 32),
+        new THREE.MeshBasicMaterial({ map: createCMBTexture(), transparent: true, opacity: 0.0 })
+      );
+      s2CMBOrb.position.set(0, 1.0, -12.5);
+      grp.add(s2CMBOrb);
+
+      s2CMBRing = new THREE.Mesh(
+        new THREE.TorusGeometry(4.6, 0.06, 12, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.0 })
+      );
+      s2CMBRing.position.copy(s2CMBOrb.position);
+      grp.add(s2CMBRing);
+
+      grp.visible = false;
+      sceneGroups.stage2 = grp;
+      scene.add(grp);
+    }
+
+    // Bridge 2: Dark Ages H/He Gas Clouds Collapsing into Population III Blue-White First Stars
+    function buildBridge2Scene() {
+      const grp = new THREE.Group();
+      grp.position.set(0, 0.8, -14);
+
+      const gGeo = new THREE.BufferGeometry();
+      const count = 650;
+      const pos = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        const r = 1.5 + Math.random() * 8.5;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+        pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+        pos[i * 3 + 2] = r * Math.cos(ph);
+      }
+      gGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      b2GasCloud = new THREE.Points(gGeo, new THREE.PointsMaterial({
+        size: 0.55, color: 0x6366f1, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending
+      }));
+      grp.add(b2GasCloud);
+
+      // 5 Brilliant Blue-White First Stars (Population III)
+      b2FirstStars = [];
+      const starCoords = [[0, 0.4, 0], [-4.2, 1.4, -1.5], [4.1, -0.5, -1.0], [-2.0, -1.8, 1.2], [2.4, 2.0, 0.8]];
+      starCoords.forEach((pt, idx) => {
+        const st = new THREE.Group();
+        st.position.set(pt[0], pt[1], pt[2]);
+        st.add(new THREE.Mesh(new THREE.SphereGeometry(idx === 0 ? 0.85 : 0.48, 20, 20), new THREE.MeshBasicMaterial({ color: 0xffffff })));
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: createGlowTexture('#38bdf8', true), transparent: true, blending: THREE.AdditiveBlending
+        }));
+        halo.scale.set(idx === 0 ? 5.6 : 3.2, idx === 0 ? 5.6 : 3.2, 1);
+        st.add(halo);
+        st.scale.setScalar(0.01);
+        grp.add(st);
+        b2FirstStars.push(st);
+      });
+
+      grp.visible = false;
+      sceneGroups.bridge2 = grp;
+      scene.add(grp);
+    }
+
+    function buildStage3Scene() {
+      const grp = new THREE.Group();
+      s3Beacons = [];
+      State.s3Targets.forEach((t) => {
+        const g = createSpiralGalaxy(t.color, 1.0, true);
+        g.position.set(t.x, t.y, t.z);
+        g.userData.targetId = t.id;
+        const lbl = createLabelSprite(t.name, '#' + t.color.toString(16).padStart(6, '0'));
+        lbl.position.set(0, 4.1, 0);
+        g.add(lbl);
+        grp.add(g);
+        s3Beacons.push(g);
+      });
+      grp.visible = false;
+      sceneGroups.stage3 = grp;
+      scene.add(grp);
+    }
+
+    // Bridge 3: Epoch 8 Solar System Birth (Sun + Orbiting Earth & Planets)
+    function buildBridge3Scene() {
+      const grp = new THREE.Group();
+      grp.position.set(0, 0.8, -14);
+
+      b3Sun = new THREE.Group();
+      b3Sun.add(new THREE.Mesh(new THREE.SphereGeometry(1.5, 28, 28), new THREE.MeshBasicMaterial({ color: 0xffd166 })));
+      const sunHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: createGlowTexture('#ff9f1c', true), transparent: true, blending: THREE.AdditiveBlending
+      }));
+      sunHalo.scale.set(7.5, 7.5, 1);
+      b3Sun.add(sunHalo);
+      grp.add(b3Sun);
+
+      b3Planets = [];
+      const specs = [
+        { r: 3.1, size: 0.34, color: 0x38bdf8, speed: 1.1, label: 'โลก (Earth)' },
+        { r: 4.8, size: 0.28, color: 0xff6b6b, speed: 0.78, label: '' },
+        { r: 6.6, size: 0.62, color: 0xffd166, speed: 0.45, ring: true }
+      ];
+      specs.forEach((sp, i) => {
+        const orbit = new THREE.Mesh(
+          new THREE.TorusGeometry(sp.r, 0.025, 8, 64),
+          new THREE.MeshBasicMaterial({ color: 0x00f5d4, transparent: true, opacity: 0.38 })
+        );
+        orbit.rotation.x = Math.PI / 2.25;
+        grp.add(orbit);
+
+        const p = new THREE.Mesh(new THREE.SphereGeometry(sp.size, 18, 18), new THREE.MeshBasicMaterial({ color: sp.color }));
+        if (sp.ring) {
+          const satRing = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.12, 8, 32), new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.7 }));
+          satRing.rotation.x = Math.PI / 2.4;
+          p.add(satRing);
+        }
+        p.userData = { r: sp.r, speed: sp.speed, phase: i * 2.1 };
+        grp.add(p);
+        b3Planets.push(p);
+      });
+
+      const lbl = createLabelSprite('กำเนิดระบบสุริยะ (9.2 พันล้านปี)', '#ffd166');
+      lbl.position.set(0, 4.2, 0);
+      grp.add(lbl);
+
+      grp.visible = false;
+      sceneGroups.bridge3 = grp;
+      scene.add(grp);
+    }
+
+    function buildStage4Scene() {
+      const grp = new THREE.Group();
+      s4Meshes = [];
+      State.s4Galaxies.forEach(g => {
+        const m = createSpiralGalaxy(g.color, 0.9, false);
+        m.position.set(g.x, g.y, g.z);
+        m.userData.galaxyId = g.id;
+        const lbl = createLabelSprite(`Galaxy ${g.name} (${g.d} Mpc)`, '#' + g.color.toString(16).padStart(6, '0'));
+        lbl.position.set(0, 3.8, 0);
+        m.add(lbl);
+        grp.add(m);
+        s4Meshes.push(m);
+      });
+      grp.visible = false;
+      sceneGroups.stage4 = grp;
+      scene.add(grp);
+    }
+
+    function setActiveSceneGroup(key) {
+      Object.keys(sceneGroups).forEach(k => {
+        if (sceneGroups[k]) sceneGroups[k].visible = (k === key);
+      });
+    }
+
+    function onSceneTap(cx, cy) {
+      tapVec.x = (cx / window.innerWidth) * 2 - 1;
+      tapVec.y = -(cy / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(tapVec, camera);
+
+      if (State.phase === 'stage3') {
+        const hits = raycaster.intersectObjects(s3Beacons.map(b => b.userData.hitMesh));
+        if (hits.length > 0) lockStage3Beacon(hits[0].object.parent.userData.targetId);
+      } else if (State.phase === 'stage4') {
+        const hits = raycaster.intersectObjects(s4Meshes.map(m => m.userData.hitMesh));
+        if (hits.length > 0) selectStage4Galaxy(hits[0].object.parent.userData.galaxyId);
+      }
+    }
+
+    /*************************************************************************
+     * 7. 60 FPS ANIMATION LOOP
+     *************************************************************************/
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const t = clock.getElapsedTime();
+
+      Look.lon += (Look.targetLon - Look.lon) * 0.14;
+      Look.lat += (Look.targetLat - Look.lat) * 0.14;
+
+      const phi = THREE.MathUtils.degToRad(90 - Look.lat);
+      const theta = THREE.MathUtils.degToRad(Look.lon);
+      camera.lookAt(
+        Math.sin(phi) * Math.sin(theta),
+        Math.cos(phi),
+        -Math.sin(phi) * Math.cos(theta)
+      );
+
+      if (starfield) starfield.rotation.y = t * 0.01;
+      if (nebulaBackdrop && nebulaBackdrop.visible) nebulaBackdrop.rotation.y = -t * 0.006;
+
+      // Hexagonal Jump-Gate Warp Tunnel
+      if (jumpGateActive) {
+        jumpGateProgress += dt * 0.75;
+        jumpGateGroup.rotation.z = t * 1.45;
+        jumpGateGroup.scale.setScalar(0.2 + Math.pow(jumpGateProgress, 1.8) * 3.8);
+        warpStreaks.position.z = (jumpGateProgress * 32) % 20;
+        if (jumpGateProgress >= 1.15) {
+          jumpGateActive = false;
+          jumpGateGroup.visible = false;
+          if (jumpGateCallback) {
+            const cb = jumpGateCallback;
+            jumpGateCallback = null;
+            cb();
+          }
+        }
+      }
+
+      // Stage 1: Singularity & Friedmann Grid
+      if (sceneGroups.stage1 && sceneGroups.stage1.visible) {
+        s1Core.rotation.y = t * 1.1;
+        s1Core.rotation.z = t * 0.6;
+        const chargeBoost = 1 + (State.s1Charge / 100) * 0.9;
+        s1Core.scale.setScalar((1 + Math.sin(t * 5) * 0.09) * (State.s1Ignited ? 0.36 : chargeBoost));
+
+        if (State.s1Ignited) {
+          s1Expand += (1.0 - s1Expand) * 0.06;
+          s1Grid.visible = true;
+          s1Burst.visible = true;
+          s1Burst.rotation.y = t * 0.16;
+
+          const omegaTotal = State.s1OmegaM + State.s1OmegaL;
+          const posAttr = s1Grid.geometry.attributes.position;
+          if (omegaTotal > 1.04) {
+            s1Grid.material.color.setHex(0xff2e97);
+            const str = (omegaTotal - 1.0) * 2.6;
+            s1Burst.scale.setScalar(s1Expand * Math.max(0.45, 1.0 - Math.abs(Math.sin(t * 2.5)) * 0.3));
+            for (let i = 0; i < posAttr.count; i++) {
+              const x = s1GridOrig[i * 3], y = s1GridOrig[i * 3 + 1];
+              posAttr.setZ(i, -((x * x + y * y) / 46) * str);
+            }
+          } else if (omegaTotal < 0.96) {
+            s1Grid.material.color.setHex(0x00f5d4);
+            const str = (1.0 - omegaTotal) * 2.5;
+            s1Burst.scale.setScalar(s1Expand * (1.2 + Math.sin(t * 1.8) * 0.12));
+            for (let i = 0; i < posAttr.count; i++) {
+              const x = s1GridOrig[i * 3], y = s1GridOrig[i * 3 + 1];
+              posAttr.setZ(i, ((x * x - y * y) / 52) * str);
+            }
+          } else {
+            s1Grid.material.color.setHex(0x38f9a8);
+            s1Burst.scale.setScalar(s1Expand);
+            for (let i = 0; i < posAttr.count; i++) {
+              posAttr.setZ(i, Math.sin(t * 2.2 + s1GridOrig[i * 3] * 0.3) * 0.08);
+            }
+          }
+          posAttr.needsUpdate = true;
+        }
+      }
+
+      // Bridge 1: Quarks -> Nucleosynthesis Animation
+      if (sceneGroups.bridge1 && sceneGroups.bridge1.visible) {
+        b1Nucleons.forEach((m, i) => {
+          const u = m.userData;
+          const rad = State.b1Fused ? u.radius * 0.35 : u.radius;
+          const a = u.angle + t * u.speed;
+          m.position.set(Math.cos(a) * rad, Math.sin(t * 1.5 + i) * 1.2 + u.yOff * (State.b1Fused ? 0.3 : 1), Math.sin(a) * rad * 0.6);
+          m.visible = !State.b1Fused || i < 4;
+        });
+        b1HeCluster.visible = State.b1Fused;
+        b1HCluster.visible = State.b1Fused;
+        if (State.b1Fused) {
+          b1HeCluster.rotation.y = t * 0.9;
+          b1HCluster.rotation.y = -t * 0.7;
+        }
+      }
+
+      // Stage 2: Plasma Fog -> CMB Sphere
+      if (sceneGroups.stage2 && sceneGroups.stage2.visible) {
+        const p = State.s2Scale / 100;
+        s2PlasmaCloud.rotation.y = t * (0.45 - p * 0.3);
+        s2PlasmaCloud.material.opacity = Math.max(0.03, 0.88 * (1 - p * 1.05));
+        s2CMBOrb.rotation.y = t * 0.22;
+        s2CMBOrb.material.opacity = Math.min(0.96, Math.max(0, (p - 0.55) * 2.3));
+        s2CMBOrb.scale.setScalar(0.65 + p * 0.45);
+        s2CMBRing.rotation.z = -t * 0.6;
+        s2CMBRing.material.opacity = s2CMBOrb.material.opacity * 0.85;
+      }
+
+      // Bridge 2: Dark Ages Gas Collapse -> Population III First Stars
+      if (sceneGroups.bridge2 && sceneGroups.bridge2.visible) {
+        b2GasCloud.rotation.y = t * 0.18;
+        const targetCloudScale = State.b2Collapsed ? 0.38 : 1.0;
+        b2GasCloud.scale.lerp(new THREE.Vector3(targetCloudScale, targetCloudScale, targetCloudScale), 0.05);
+        b2GasCloud.material.opacity = State.b2Collapsed ? 0.25 : 0.72;
+        b2FirstStars.forEach((st, idx) => {
+          const targetS = State.b2Collapsed ? (1.0 + Math.sin(t * 4 + idx) * 0.1) : 0.01;
+          st.scale.lerp(new THREE.Vector3(targetS, targetS, targetS), 0.06);
+        });
+      }
+
+      // Stage 3: Supernova Target Lock
+      if (sceneGroups.stage3 && sceneGroups.stage3.visible) {
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        let aimed = -1;
+        s3Beacons.forEach((b, idx) => {
+          b.userData.disk.rotation.y = t * 0.5;
+          if (b.userData.supernova) b.userData.supernova.scale.setScalar(1 + Math.sin(t * 8 + idx) * 0.32);
+          if (camDir.dot(b.position.clone().normalize()) > 0.945) aimed = idx;
+        });
+        State.s3AimedIdx = aimed;
+        const ret = document.getElementById('target-reticle');
+        if (ret && !ret.classList.contains('hidden')) {
+          ret.classList.toggle('locked', aimed !== -1);
+          const ring = document.getElementById('reticle-ring');
+          if (ring) ring.setAttribute('stroke', aimed !== -1 ? '#38f9a8' : '#00f5d4');
+        }
+      }
+
+      // Bridge 3: Solar System Orbit Animation
+      if (sceneGroups.bridge3 && sceneGroups.bridge3.visible) {
+        b3Sun.rotation.y = t * 0.4;
+        b3Planets.forEach(p => {
+          const u = p.userData;
+          const a = t * u.speed + u.phase;
+          p.position.set(Math.cos(a) * u.r, Math.sin(a) * u.r * 0.22, Math.sin(a) * u.r * 0.92);
+        });
+      }
+
+      // Stage 4: Hubble Galaxies
+      if (sceneGroups.stage4 && sceneGroups.stage4.visible) {
+        s4Meshes.forEach((m, i) => { m.userData.disk.rotation.y = t * (0.45 + i * 0.08); });
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    /*************************************************************************
+     * 8. CINEMATIC INTRO (3 SCENES)
+     *************************************************************************/
+    const INTRO_SCENES = [
+      {
+        badge: 'SCENE 1 / 3 • SINGULARITY (t = 0)',
+        era: '0 วินาที: ภาวะเอกฐาน',
+        pct: '33%',
+        display: '13,800 ล้านปีก่อน... ไม่มีอวกาศ ไม่มีเวลา ทุกพลังงานอัดแน่นอยู่ในจุดเดียวที่เรียกว่า "ภาวะเอกฐาน"',
+        spoken: 'หนึ่งหมื่นสามพันแปดร้อยล้านปีก่อน ไม่มีทั้งอวกาศและเวลา ทุกสรรพสิ่งอัดแน่นอยู่ในจุดเล็กจิ๋วที่เรียกว่าภาวะเอกฐานครับ'
+      },
+      {
+        badge: 'SCENE 2 / 3 • 9 COSMIC EPOCHS',
+        era: 'วิวัฒนาการ 9 ยุคแห่งเอกภพ',
+        pct: '66%',
+        display: 'จากบิกแบง สู่ยุคควาร์ก สังเคราะห์นิวเคลียส แสงแรก ดาวฤกษ์รุ่นแรก กาแล็กซี ระบบสุริยะ จนถึงเอกภพปัจจุบัน!',
+        spoken: 'หลังบิกแบง เอกภพผ่านวิวัฒนาการถึงเก้ายุค ตั้งแต่ยุคอนุภาค นิวเคลียส แสงแรก ดาวฤกษ์ กาแล็กซี ระบบสุริยะ จนถึงปัจจุบันครับ'
+      },
+      {
+        badge: 'SCENE 3 / 3 • GUARDIANS MISSION',
+        era: 'ภารกิจผู้พิทักษ์เอกภพ',
+        pct: '100%',
+        display: 'กัปตัน! ยาน Milano พร้อมแล้ว ใช้สมการฟิสิกส์จริงเปิดประตูวาร์ปหกเหลี่ยมปลดล็อกทั้ง 9 ยุควิวัฒนาการกันเลย!',
+        spoken: 'กัปตันครับ ยานพร้อมออกเดินทางแล้ว ใช้ความรู้ฟิสิกส์จริงเปิดประตูวาร์ปและปลดล็อกทั้งเก้ายุควิวัฒนาการกันเลยครับ'
+      }
+    ];
+
+    function startIntro() {
+      State.mode = 'intro';
+      resetView();
+      setActiveSceneGroup('stage1');
+      document.getElementById('intro-overlay').classList.remove('hidden');
+      document.getElementById('intro-overlay').classList.add('flex');
+      showIntroScene(0);
+    }
+
+    function showIntroScene(idx) {
+      if (idx >= INTRO_SCENES.length) { finishIntro(); return; }
+      State.introIdx = idx;
+      const sc = INTRO_SCENES[idx];
+      document.getElementById('intro-badge').textContent = sc.badge;
+      document.getElementById('intro-era-tag').textContent = sc.era;
+      document.getElementById('intro-bar').style.width = sc.pct;
+      document.getElementById('btn-intro-next').textContent = idx === 2 ? 'เข้าสู่ห้องนักบิน! 🚀' : 'ต่อไป ➜';
+      document.querySelectorAll('.intro-dot').forEach((d, i) => {
+        d.className = `intro-dot w-2.5 h-2.5 rounded-full ${i <= idx ? 'bg-cosmos-gold' : 'bg-slate-600'}`;
+      });
+
+      if (idx === 1) {
+        CosmicAudio.bigBangBoom();
+        s1Burst.visible = true;
+        s1Burst.scale.setScalar(1.2);
+      } else if (idx === 2) {
+        jumpGateGroup.visible = true;
+        jumpGateGroup.scale.setScalar(0.85);
+      } else {
+        s1Burst.visible = false;
+        jumpGateGroup.visible = false;
+      }
+
+      CosmicAudio.novaComm(sc.display, sc.spoken, 'intro-text', false);
+    }
+
+    function finishIntro() {
+      CosmicAudio.stopSpeech();
+      jumpGateGroup.visible = false;
+      s1Burst.visible = false;
+      document.getElementById('intro-overlay').classList.add('hidden');
+      document.getElementById('intro-overlay').classList.remove('flex');
+      document.getElementById('game-hud').classList.remove('hidden');
+      document.getElementById('game-hud').classList.add('flex');
+      State.mode = 'playing';
+      enterPhase('stage1');
+    }
+
+    /*************************************************************************
+     * 9. PHASE CONTROLLER (4 CORE MISSIONS + 3 EVOLUTION BRIDGES)
+     *************************************************************************/
+    function showInfoModal({ badge, title, bodyHtml, btnText, onConfirm = null, spokenThai = null }) {
+      const m = document.getElementById('info-modal');
+      document.getElementById('info-modal-badge').textContent = badge;
+      document.getElementById('info-modal-title').textContent = title;
+      document.getElementById('info-modal-body').innerHTML = bodyHtml;
+      const btn = document.getElementById('info-modal-btn');
+      btn.textContent = btnText;
+
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      if (spokenThai) CosmicAudio.speakNaturalThai(spokenThai);
+
+      btn.onclick = () => {
+        CosmicAudio.click();
+        CosmicAudio.stopSpeech();
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+        if (onConfirm) onConfirm();
+      };
+    }
+
+    function enterPhase(phaseName) {
+      State.phase = phaseName;
+      resetView();
+      setActiveSceneGroup(phaseName);
+      document.getElementById('target-reticle').classList.toggle('hidden', phaseName !== 'stage3');
+      if (State.dockCollapsed) toggleMissionDock();
+
+      const timeEl = document.getElementById('hud-era-time');
+
+      if (phaseName === 'stage1') {
+        unlockEpochs([1], 1);
+        timeEl.textContent = 'Epoch 1–2 • t = 0 → 10⁻³² s';
+        renderStage1();
+        CosmicAudio.novaComm(
+          'ยุคที่ 1: ภาวะเอกฐาน! กดค้างปุ่ม IGNITE เพื่อชาร์จจุดชนวนบิกแบงให้เต็ม 100% เลยครับ',
+          'ยุคที่หนึ่ง ภาวะเอกฐาน กดค้างที่ปุ่มจุดชนวนบิกแบงให้เต็มร้อยเปอร์เซ็นต์ได้เลยครับ'
+        );
+      } else if (phaseName === 'bridge1') {
+        unlockEpochs([3, 4], 4);
+        State.b1Fused = false;
+        timeEl.textContent = 'Epoch 3–4 • 10⁻⁶ s → 3 นาที';
+        renderBridge1();
+        CosmicAudio.novaComm(
+          'ฉากเชื่อมยุค (10⁻⁶ วินาที → 3 นาที): ควาร์กรวมตัวเป็นโปรตอนและนิวตรอน! กดหลอมนิวเคลียส H & He แล้วตอบคำถาม Checkpoint ครับ',
+          'เข้าสู่ยุคอนุภาคมูลฐานและยุคสังเคราะห์นิวเคลียสครับ กดปุ่มหลอมรวมนิวเคลียสไฮโดรเจนและฮีเลียม แล้วตอบคำถามเช็กพอยต์เพื่อรับโบนัสครับ'
+        );
+      } else if (phaseName === 'stage2') {
+        unlockEpochs([5], 5);
+        timeEl.textContent = 'Epoch 5 • 380,000 ปี (3,000 K)';
+        renderStage2();
+        CosmicAudio.novaComm(
+          'ยุคที่ 5: พายุพลาสมา 10,000 K! ดึงคันโยกขยายอวกาศ a(t) เพื่อลดอุณหภูมิลงถึง 3,000 K ปลดปล่อยแสงแรก CMB ครับ',
+          'ยุคที่ห้า ยุครีคอมบิเนชัน ดึงคันโยกขยายอวกาศเพื่อลดอุณหภูมิลงให้ถึงสามพันเคลวินและปลดปล่อยแสงแรกครับ'
+        );
+      } else if (phaseName === 'bridge2') {
+        unlockEpochs([6], 6);
+        State.b2Collapsed = false;
+        timeEl.textContent = 'Epoch 6 • 100–400 ล้านปี';
+        renderBridge2();
+        CosmicAudio.novaComm(
+          'ฉากเชื่อมยุค (200 ล้านปี): ยุคมืดสิ้นสุดลง! กดยุบกลุ่มแก๊ส H/He ด้วยแรงโน้มถ่วงเพื่อจุดประกายดาวฤกษ์รุ่นแรกครับ',
+          'เข้าสู่ยุคมืดและดาวฤกษ์รุ่นแรกครับ กดปุ่มใช้แรงโน้มถ่วงยุบกลุ่มแก๊สให้เกิดดาวฤกษ์รุ่นแรกที่สว่างจ้าครับ'
+        );
+      } else if (phaseName === 'stage3') {
+        unlockEpochs([7], 7);
+        timeEl.textContent = 'Epoch 7 • 1 พันล้านปี';
+        renderStage3();
+        CosmicAudio.novaComm(
+          'ยุคที่ 7: ก่อตัวกาแล็กซี & เทียนมาตรฐาน! เล็งเป้ากลางจอสแกนซูเปอร์โนวาชนิด Ia ทั้ง 2 แห่งเพื่อวัดระยะทางครับ',
+          'ยุคที่เจ็ด ยุคก่อตัวของกาแล็กซี เล็งเป้าสแกนซูเปอร์โนวาทั้งสองแห่งแล้วคำนวณระยะทางด้วยมอดูลัสระยะทางครับ'
+        );
+      } else if (phaseName === 'bridge3') {
+        unlockEpochs([8], 8);
+        timeEl.textContent = 'Epoch 8 • 9.2 พันล้านปี';
+        renderBridge3();
+        CosmicAudio.novaComm(
+          'Epoch 8 (9.2 พันล้านปีหลังบิกแบง): เนบิวลาสุริยะยุบตัวก่อกำเนิดดวงอาทิตย์ โลก และระบบสุริยะของเรา!',
+          'มาถึงยุคที่แปด เก้าจุดสองพันล้านปีหลังบิกแบง เนบิวลาสุริยะยุบตัวก่อกำเนิดดวงอาทิตย์และโลกของเราครับ'
+        );
+      } else if (phaseName === 'stage4') {
+        unlockEpochs([9], 9);
+        timeEl.textContent = 'Epoch 9 • 13.8 พันล้านปี (ปัจจุบัน)';
+        renderStage4();
+        CosmicAudio.novaComm(
+          'ยุคที่ 9: เอกภพปัจจุบัน! แตะสแกนกาแล็กซี Alpha, Beta, Gamma คำนวณเรดชิฟต์ หาค่า H₀ และอายุเอกภพครับ!',
+          'ยุคสุดท้าย เอกภพในปัจจุบัน แตะสแกนกาแล็กซีทั้งสามแห่งเพื่อคำนวณความเร็วเรดชิฟต์ หาค่าคงตัวฮับเบิล และอายุของเอกภพครับ'
+        );
+      }
+    }
+
+    /* ===================================================================== */
+    /* STAGE 1 (EPOCHS 1–2): SINGULARITY + INFLATION & FRIEDMANN EQUATION    */
+    /* ===================================================================== */
+    let chargeInterval = null;
+
+    function renderStage1() {
+      const dock = document.getElementById('mission-dock');
+      if (!State.s1Ignited) {
+        dock.innerHTML = `
+          <div class="space-y-2 text-center">
+            <div class="flex items-center justify-between text-xs font-display">
+              <span class="text-cosmos-gold font-semibold">⚡ EPOCH 1: จุดชนวนบิกแบง (กดค้างไว้)</span>
+              <span id="s1-charge-pct" class="font-sci text-cosmos-cyan font-bold">0%</span>
+            </div>
+            <div class="w-full h-3 bg-cosmos-bg rounded-full overflow-hidden border border-cosmos-magenta/50">
+              <div id="s1-charge-bar" class="h-full bg-gradient-to-r from-cosmos-cyan via-cosmos-magenta to-cosmos-gold transition-all duration-75" style="width: 0%;"></div>
+            </div>
+            <button id="btn-hold-ignite" class="w-full py-3 rounded-2xl text-sm sm:text-base btn-guardian select-none active:scale-95">
+              🔥 กดค้างเพื่อชาร์จจุดชนวนบิกแบง (HOLD TO IGNITE)
+            </button>
+          </div>
+        `;
+
+        const btn = document.getElementById('btn-hold-ignite');
+        const startHold = (e) => {
+          e.preventDefault();
+          CosmicAudio.init();
+          clearInterval(chargeInterval);
+          chargeInterval = setInterval(() => {
+            State.s1Charge = Math.min(100, State.s1Charge + 4);
+            document.getElementById('s1-charge-pct').textContent = `${State.s1Charge}%`;
+            document.getElementById('s1-charge-bar').style.width = `${State.s1Charge}%`;
+            CosmicAudio.sfxTone(220 + State.s1Charge * 6, 260 + State.s1Charge * 6, 0.05, 'sawtooth', 0.06);
+            if (State.s1Charge >= 100) {
+              clearInterval(chargeInterval);
+              igniteBigBang();
+            }
+          }, 42);
+        };
+        const stopHold = () => {
+          clearInterval(chargeInterval);
+          if (!State.s1Ignited && State.s1Charge > 0) {
+            State.s1Charge = Math.max(0, State.s1Charge - 15);
+            const pct = document.getElementById('s1-charge-pct');
+            const bar = document.getElementById('s1-charge-bar');
+            if (pct) pct.textContent = `${State.s1Charge}%`;
+            if (bar) bar.style.width = `${State.s1Charge}%`;
+          }
+        };
+        btn.addEventListener('pointerdown', startHold);
+        window.addEventListener('pointerup', stopHold);
+        window.addEventListener('pointercancel', stopHold);
+        return;
+      }
+
+      const targetL = Number((1.0 - State.s1OmegaM).toFixed(2));
+      const total = Number((State.s1OmegaM + State.s1OmegaL).toFixed(2));
+      const st = getFriedmannStatus(total);
+
+      dock.innerHTML = `
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-display font-semibold text-cosmos-gold">⚖️ EPOCH 2: สมดุลสมการฟรีดแมน (Inflation)</span>
+            <span class="font-sci text-[11px] px-2 py-0.5 rounded bg-cosmos-deep border border-cosmos-cyan/40 text-cosmos-cyan">
+              Ωₘ = ${State.s1OmegaM.toFixed(2)}
+            </span>
+          </div>
+          <p class="text-xs text-slate-200">
+            ปรับพลังงานมืด <b>Ω_Λ</b> เพื่อให้ <b>Ωรวม = Ωₘ + Ω_Λ = 1.00</b> (เอกภพแบน k = 0)
+          </p>
+          <div class="space-y-1">
+            <div class="flex justify-between font-sci text-xs">
+              <span class="text-cosmos-magenta">Ω_Λ = <b id="s1-ol-val">${State.s1OmegaL.toFixed(2)}</b></span>
+              <span id="s1-tot-val" class="${st.textCls} font-bold">Ωรวม = ${total.toFixed(2)}</span>
+            </div>
+            <input id="s1-ol-slider" type="range" min="0.00" max="1.20" step="0.05" value="${State.s1OmegaL}" class="w-full" />
+          </div>
+          <div id="s1-status-box" class="px-3 py-1.5 rounded-xl border text-xs ${st.boxCls}">${st.msg}</div>
+          <button id="btn-s1-verify" class="w-full py-2.5 rounded-xl text-sm btn-cyan active:scale-95">
+            🔒 ล็อกค่าความสมดุล Ω_Λ และเปิดประตูวาร์ป
+          </button>
+        </div>
+      `;
+
+      document.getElementById('s1-ol-slider').oninput = (e) => {
+        State.s1OmegaL = parseFloat(e.target.value);
+        const tot = Number((State.s1OmegaM + State.s1OmegaL).toFixed(2));
+        const info = getFriedmannStatus(tot);
+        document.getElementById('s1-ol-val').textContent = State.s1OmegaL.toFixed(2);
+        const tv = document.getElementById('s1-tot-val');
+        tv.textContent = `Ωรวม = ${tot.toFixed(2)}`;
+        tv.className = `${info.textCls} font-bold`;
+        const sb = document.getElementById('s1-status-box');
+        sb.textContent = info.msg;
+        sb.className = `px-3 py-1.5 rounded-xl border text-xs ${info.boxCls}`;
+      };
+
+      document.getElementById('btn-s1-verify').onclick = () => {
+        const tot = Number((State.s1OmegaM + State.s1OmegaL).toFixed(2));
+        if (Math.abs(tot - 1.0) <= 0.02) {
+          CosmicAudio.fanfare();
+          addScore(200);
+          showInfoModal({
+            badge: '✓ EPOCH 1–2 COMPLETE • FRIEDMANN EQUATION',
+            title: 'เอกภพพองตัวและแบนสมดุลแล้ว!',
+            bodyHtml: `
+              <div class="font-sci text-xs bg-black/60 p-3 rounded-xl border-l-4 border-cosmos-plasma text-cosmos-plasma">
+                Ω = Ωₘ (${State.s1OmegaM.toFixed(2)}) + Ω_Λ (${targetL.toFixed(2)}) = 1.00  ⇒  k = 0
+              </div>
+              <p>กาลอวกาศขยายตัวอย่างรวดเร็วในยุคพองตัว (10⁻³⁶ – 10⁻³² s) เตรียมวาร์ปสู่ยุคอนุภาคมูลฐานและยุคสังเคราะห์นิวเคลียส!</p>
+            `,
+            btnText: '🌀 วาร์ปสู่ยุคควาร์ก & นิวเคลียส (10⁻⁶ s → 3 นาที)',
+            spokenThai: 'ยอดเยี่ยมครับ เอกภพแบนสมดุลแล้ว เตรียมวาร์ปสู่ยุคอนุภาคมูลฐานและยุคสังเคราะห์นิวเคลียสครับ',
+            onConfirm: () => triggerJumpGate(() => enterPhase('bridge1'))
+          });
+        } else if (tot > 1.02) {
+          damageShield(15, `คุณตั้งค่า Ωรวม = ${tot.toFixed(2)} ซึ่งมากกว่า 1! ถ้า <b>Ω &gt; 1</b> แรงโน้มถ่วงจะดึงให้เอกภพยุบตัวกลับเป็น <b>Big Crunch</b>!<br>คำใบ้: Ω_Λ = 1.00 − ${State.s1OmegaM.toFixed(2)}`);
+        } else {
+          damageShield(15, `คุณตั้งค่า Ωรวม = ${tot.toFixed(2)} ซึ่งน้อยกว่า 1! ถ้า <b>Ω &lt; 1</b> เอกภพจะขยายตัวเร็วเกินจนดาวฤกษ์ก่อตัวไม่ได้<br>คำใบ้: Ω_Λ = 1.00 − ${State.s1OmegaM.toFixed(2)}`);
+        }
+      };
+    }
+
+    function igniteBigBang() {
+      State.s1Ignited = true;
+      unlockEpochs([2], 2);
+      CosmicAudio.bigBangBoom();
+      const flash = document.getElementById('flash-overlay');
+      flash.style.background = 'radial-gradient(circle, #ffffff 0%, #00f5d4 45%, #ff2e97 100%)';
+      flash.style.opacity = '0.95';
+      document.body.classList.add('shake-hit');
+      setTimeout(() => { flash.style.opacity = '0'; }, 150);
+      setTimeout(() => { document.body.classList.remove('shake-hit'); }, 550);
+      addScore(100);
+      CosmicAudio.novaComm(
+        `บิกแบงสำเร็จ! ปลดล็อกยุคการพองตัว (Epoch 2) เซนเซอร์พบ Ωₘ = ${State.s1OmegaM.toFixed(2)} ปรับ Ω_Λ ให้ Ωรวม = 1.00 เลยครับ!`,
+        'บิกแบงเกิดขึ้นแล้วครับ เข้าสู่ยุคการพองตัว ตอนนี้ปรับพลังงานมืดให้ผลรวมความหนาแน่นเท่ากับหนึ่งพอดีครับ'
+      );
+      renderStage1();
+    }
+
+    function getFriedmannStatus(tot) {
+      if (tot > 1.03) return {
+        textCls: 'text-cosmos-magenta',
+        boxCls: 'bg-rose-950/70 border-cosmos-magenta/60 text-rose-200',
+        msg: '🔴 เตือนภัย! Ω > 1 แรงโน้มถ่วงมากเกินไป เอกภพกำลังยุบตัวกลับ (Big Crunch)!'
+      };
+      if (tot < 0.97) return {
+        textCls: 'text-cosmos-cyan',
+        boxCls: 'bg-cyan-950/70 border-cosmos-cyan/60 text-cyan-200',
+        msg: '🔵 เตือนภัย! Ω < 1 เอกภพโค้งอานม้า ขยายตัวเร็วจัดจนดาวก่อตัวไม่ได้!'
+      };
+      return {
+        textCls: 'text-cosmos-plasma',
+        boxCls: 'bg-emerald-950/75 border-cosmos-plasma/70 text-emerald-200',
+        msg: '🟢 สมดุลสมบูรณ์! กริดกาลอวกาศแบนราบ (k = 0) กดล็อกค่าเพื่อเปิดประตูวาร์ปได้เลย!'
+      };
+    }
+
+    /* ===================================================================== */
+    /* BRIDGE 1 (EPOCHS 3–4): QUARK-HADRON & BIG BANG NUCLEOSYNTHESIS        */
+    /* ===================================================================== */
+    function renderBridge1() {
+      const dock = document.getElementById('mission-dock');
+      if (!State.b1Fused) {
+        dock.innerHTML = `
+          <div class="space-y-2 text-xs sm:text-sm">
+            <div class="flex items-center justify-between">
+              <span class="font-display font-semibold text-cosmos-cyan">⚛️ EPOCH 3–4: ควาร์ก → สังเคราะห์นิวเคลียส</span>
+              <span class="font-sci text-[10px] text-cosmos-gold">10⁻⁶ s → 3 นาที | 10⁹ K</span>
+            </div>
+            <p class="text-xs text-slate-200">
+              ควาร์กจับตัวเป็น <b>โปรตอน (ชมพู)</b> และ <b>นิวตรอน (ฟ้า)</b> แล้ว! เมื่อเวลาผ่านไป 3 นาที เอกภพเย็นลงเหลือ 10⁹ K กดปุ่มเพื่อเริ่มฟิวชันหลอมรวมนิวเคลียสธาตุเบา!
+            </p>
+            <button id="btn-b1-fuse" class="w-full py-3 rounded-2xl text-sm btn-guardian active:scale-95">
+              🧬 เริ่มปฏิกิริยาฟิวชันสังเคราะห์นิวเคลียส H และ He!
+            </button>
+          </div>
+        `;
+        document.getElementById('btn-b1-fuse').onclick = () => {
+          CosmicAudio.fanfare();
+          State.b1Fused = true;
+          CosmicAudio.novaComm(
+            'หลอมรวมนิวเคลียสสำเร็จ! ตอบคำถาม Checkpoint เพื่อรับ +150 คะแนนและฟื้นฟูเกราะยาน +15% ครับ',
+            'หลอมรวมนิวเคลียสไฮโดรเจนและฮีเลียมสำเร็จแล้วครับ ตอบคำถามเช็กพอยต์เพื่อรับคะแนนโบนัสและฟื้นฟูเกราะยานครับ'
+          );
+          renderBridge1();
+        };
+        return;
+      }
+
+      dock.innerHTML = `
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="font-display font-semibold text-cosmos-gold">🧬 EVOLUTION CHECKPOINT (โบนัส +150 &amp; เกราะ +15%)</div>
+          <p class="text-white text-xs sm:text-sm">
+            หลังบิกแบง 3 นาที นิวเคลียสที่เกิดขึ้นมีอัตราส่วน <b>ไฮโดรเจน (H) ต่อ ฮีเลียม (He) โดยมวล</b> ประมาณเท่าใด?
+          </p>
+          <div class="grid grid-cols-3 gap-2">
+            <button data-b1="50" class="b1-ans py-2.5 rounded-xl bg-cosmos-deep border border-slate-600 font-display font-semibold text-xs active:scale-95">50% : 50%</button>
+            <button data-b1="75" class="b1-ans py-2.5 rounded-xl bg-cosmos-deep border border-slate-600 font-display font-semibold text-xs active:scale-95">75% : 25%</button>
+            <button data-b1="25" class="b1-ans py-2.5 rounded-xl bg-cosmos-deep border border-slate-600 font-display font-semibold text-xs active:scale-95">25% : 75%</button>
+          </div>
+        </div>
+      `;
+
+      dock.querySelectorAll('.b1-ans').forEach(btn => {
+        btn.onclick = () => {
+          if (btn.dataset.b1 === '75') {
+            CosmicAudio.fanfare();
+            addScore(150);
+            restoreShield(15);
+            triggerJumpGate(() => enterPhase('stage2'));
+          } else {
+            damageShield(10, 'หลังบิกแบง 3 นาที (Big Bang Nucleosynthesis) โปรตอนมีมากกว่านิวตรอนมาก ทำให้เกิดนิวเคลียส <b>ไฮโดรเจน ~75% และฮีเลียม ~25% โดยมวล</b> ซึ่งเป็นหลักฐานสำคัญที่สนับสนุนทฤษฎีบิกแบงครับ!');
+          }
+        };
+      });
+    }
+
+    /* ===================================================================== */
+    /* STAGE 2 (EPOCH 5): RECOMBINATION, CMB SPHERE & WIEN'S LAW             */
+    /* ===================================================================== */
+    function renderStage2() {
+      const dock = document.getElementById('mission-dock');
+      if (!State.s2Cleared) {
+        const temp = Math.round(10000 - (State.s2Scale / 100) * 7000);
+        const aVal = (1 + (State.s2Scale / 100) * 2.33).toFixed(2);
+        dock.innerHTML = `
+          <div class="space-y-2 text-xs sm:text-sm">
+            <div class="flex items-center justify-between">
+              <span class="font-display font-semibold text-cosmos-gold">🌪️ EPOCH 5A: ขยายอวกาศฝ่าพายุพลาสมา</span>
+              <span id="s2-temp-badge" class="font-sci text-xs font-bold px-2 py-0.5 rounded bg-rose-950 border border-cosmos-gold text-cosmos-gold">
+                T = ${temp.toLocaleString()} K
+              </span>
+            </div>
+            <p class="text-xs text-slate-300">
+              จาก <b class="font-sci text-cosmos-cyan">T ∝ 1/a(t)</b> ดึงคันโยกขยายอวกาศ <b>a(t)</b> ให้สุดจนอุณหภูมิลดถึง 3,000 K (อิเล็กตรอนรวมกับนิวเคลียสเกิดอะตอม)
+            </p>
+            <input id="s2-lever" type="range" min="0" max="100" step="1" value="${State.s2Scale}" class="w-full" />
+            <div class="flex justify-between font-sci text-[11px] text-slate-400">
+              <span>a(t) = <b id="s2-aval" class="text-white">${aVal}×</b></span>
+              <span class="text-cosmos-plasma">เป้าหมาย: 3,000 K (380,000 ปี)</span>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('s2-lever').oninput = (e) => {
+          State.s2Scale = parseInt(e.target.value, 10);
+          const T = Math.round(10000 - (State.s2Scale / 100) * 7000);
+          document.getElementById('s2-temp-badge').textContent = `T = ${T.toLocaleString()} K`;
+          document.getElementById('s2-aval').textContent = `${(1 + (State.s2Scale / 100) * 2.33).toFixed(2)}×`;
+          if (State.s2Scale >= 100) {
+            State.s2Cleared = true;
+            CosmicAudio.fanfare();
+            const flash = document.getElementById('flash-overlay');
+            flash.style.background = 'radial-gradient(circle, #ffffff 0%, #ffd166 50%, transparent 100%)';
+            flash.style.opacity = '0.85';
+            setTimeout(() => { flash.style.opacity = '0'; }, 200);
+            addScore(100);
+            CosmicAudio.novaComm(
+              'เอกภพโปร่งแสงแล้ว! เผยทรงกลม CMB 3 มิติตรงหน้า ตอนนี้ใช้กฎของวีนคำนวณ λ_max สำหรับอุณหภูมิปัจจุบัน T₀ = 2.725 K ครับ',
+              'สำเร็จครับ เอกภพโปร่งแสงและปลดปล่อยแสงแรกออกมาแล้ว ตอนนี้ใช้กฎของวีนคำนวณความยาวคลื่นสูงสุดในหน่วยมิลลิเมตรกันครับ'
+            );
+            renderStage2();
+          }
+        };
+        return;
+      }
+
+      dock.innerHTML = `
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="font-display font-semibold text-cosmos-gold">📡 EPOCH 5B: คำนวณสัญญาณ CMB ด้วยกฎของวีน</div>
+          ${!State.s2WienSolved ? `
+            <div class="p-2 rounded-xl bg-black/55 border border-cosmos-gold/40 space-y-1">
+              <div class="font-sci text-[11px] text-cosmos-cyan">λ_max · T = 2.898 × 10⁻³ m·K  |  T₀ = 2.725 K</div>
+              <div class="text-xs text-slate-200">คำนวณความยาวคลื่นสูงสุด <b>λ_max</b> ของ CMB ในหน่วย <b>มิลลิเมตร (mm)</b></div>
+            </div>
+            <div class="flex gap-2">
+              <input id="s2-wien-input" type="number" step="0.01" placeholder="เช่น 1.06"
+                class="flex-1 px-3 py-2 rounded-xl bg-cosmos-bg border border-cosmos-cyan/60 font-sci text-sm text-white focus:outline-none focus:border-cosmos-gold" />
+              <span class="flex items-center px-1.5 font-sci text-xs text-slate-300">mm</span>
+              <button id="btn-s2-check-wien" class="px-4 py-2 rounded-xl text-xs sm:text-sm btn-cyan active:scale-95">ตรวจคำตอบ</button>
+            </div>
+          ` : `
+            <div class="p-1.5 rounded-xl bg-emerald-950/60 border border-cosmos-plasma/50 text-cosmos-plasma text-xs font-sci">
+              ✓ λ_max ≈ 1.06 mm (0.00106 m)
+            </div>
+            <div class="text-xs text-white font-display">จูนเสาอากาศรับคลื่นที่ความยาวคลื่น <b>1.06 mm</b> ซึ่งตรงกับย่านคลื่นใด?</div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              <button data-band="gamma" class="band-btn py-2 px-2 rounded-xl bg-cosmos-deep border border-slate-600 text-xs font-display active:scale-95">รังสีแกมมา</button>
+              <button data-band="visible" class="band-btn py-2 px-2 rounded-xl bg-cosmos-deep border border-slate-600 text-xs font-display active:scale-95">แสงที่ตามองเห็น</button>
+              <button data-band="microwave" class="band-btn py-2 px-2 rounded-xl bg-cosmos-deep border border-slate-600 text-xs font-display active:scale-95">ไมโครเวฟ</button>
+              <button data-band="xray" class="band-btn py-2 px-2 rounded-xl bg-cosmos-deep border border-slate-600 text-xs font-display active:scale-95">รังสีเอกซ์</button>
+            </div>
+          `}
+        </div>
+      `;
+
+      if (!State.s2WienSolved) {
+        document.getElementById('btn-s2-check-wien').onclick = () => {
+          const val = parseFloat(document.getElementById('s2-wien-input').value);
+          if (!isNaN(val) && val >= 1.00 && val <= 1.15) {
+            CosmicAudio.fanfare();
+            State.s2WienSolved = true;
+            addScore(180);
+            CosmicAudio.novaComm(
+              'แม่นยำมาก! λ_max ≈ 1.06 mm ตอนนี้เลือกย่านคลื่นแม่เหล็กไฟฟ้าเพื่อจูนเสาอากาศรับสัญญาณ CMB ครับ',
+              'คำนวณได้แม่นยำมากครับ ตอนนี้เลือกย่านคลื่นแม่เหล็กไฟฟ้าที่ตรงกับหนึ่งจุดศูนย์หกมิลลิเมตรครับ'
+            );
+            renderStage2();
+          } else {
+            damageShield(15, 'จากกฎของวีน <b>λ_max = (2.898 × 10⁻³) / 2.725 ≈ 0.001063 m</b> เมื่อแปลงเป็นมิลลิเมตร (คูณ 1,000) จะได้ประมาณ <b>1.06 mm</b> (กดปุ่ม b(2.898e-3) ในเครื่องคิดเลขช่วยหารได้เลย!)');
+          }
+        };
+      } else {
+        dock.querySelectorAll('.band-btn').forEach(btn => {
+          btn.onclick = () => {
+            if (btn.dataset.band === 'microwave') {
+              CosmicAudio.fanfare();
+              addScore(150);
+              showInfoModal({
+                badge: '✓ EPOCH 5 COMPLETE • WIEN\'S LAW & CMB',
+                title: 'รับสัญญาณรังสีไมโครเวฟพื้นหลังสำเร็จ!',
+                bodyHtml: `
+                  <div class="font-sci text-xs bg-black/60 p-3 rounded-xl border-l-4 border-cosmos-gold text-cosmos-gold">
+                    λ_max = 2.898×10⁻³ / 2.725 ≈ 1.06 mm (ย่านไมโครเวฟ)
+                  </div>
+                  <p>แสงแรกจากยุค Recombination ถูกการขยายตัวของอวกาศยืดความยาวคลื่นจนปัจจุบันตกในย่าน <b>ไมโครเวฟ (CMB)</b> เตรียมวาร์ปสู่ยุคมืดและดาวฤกษ์รุ่นแรก!</p>
+                `,
+                btnText: '🌀 วาร์ปสู่ยุคมืด & ดาวฤกษ์รุ่นแรก (200 ล้านปี)',
+                spokenThai: 'ถูกต้องครับ คลื่นนี้คือรังสีไมโครเวฟพื้นหลัง เตรียมวาร์ปเข้าสู่ยุคมืดและกำเนิดดาวฤกษ์รุ่นแรกครับ',
+                onConfirm: () => triggerJumpGate(() => enterPhase('bridge2'))
+              });
+            } else {
+              damageShield(15, `ย่าน <b>${btn.textContent}</b> มีความยาวคลื่นสั้นกว่าระดับมิลลิเมตรมาก! ความยาวคลื่น 1.06 mm อยู่ในย่าน <b>ไมโครเวฟ</b> ครับ`);
+            }
+          };
+        });
+      }
+    }
+
+    /* ===================================================================== */
+    /* BRIDGE 2 (EPOCH 6): DARK AGES -> FIRST STARS (POPULATION III)         */
+    /* ===================================================================== */
+    function renderBridge2() {
+      const dock = document.getElementById('mission-dock');
+      if (!State.b2Collapsed) {
+        dock.innerHTML = `
+          <div class="space-y-2 text-xs sm:text-sm">
+            <div class="flex items-center justify-between">
+              <span class="font-display font-semibold text-sky-300">🌟 EPOCH 6: ยุคมืด → ดาวฤกษ์รุ่นแรก</span>
+              <span class="font-sci text-[10px] text-cosmos-gold">100–400 ล้านปี</span>
+            </div>
+            <p class="text-xs text-slate-200">
+              เอกภพเต็มไปด้วยกลุ่มแก๊สไฮโดรเจนและฮีเลียมอันมืดมิด กดปุ่มเปิดแรงโน้มถ่วงดึงกลุ่มแก๊สให้ยุบตัวจุดประกาย <b>ดาวฤกษ์รุ่นแรก (Cosmic Dawn)</b>!
+            </p>
+            <button id="btn-b2-collapse" class="w-full py-3 rounded-2xl text-sm btn-cyan active:scale-95">
+              ✨ ยุบกลุ่มแก๊ส H/He จุดประกายดาวฤกษ์รุ่นแรก!
+            </button>
+          </div>
+        `;
+        document.getElementById('btn-b2-collapse').onclick = () => {
+          CosmicAudio.fanfare();
+          State.b2Collapsed = true;
+          const flash = document.getElementById('flash-overlay');
+          flash.style.background = 'radial-gradient(circle, #ffffff 0%, #38bdf8 45%, transparent 100%)';
+          flash.style.opacity = '0.75';
+          setTimeout(() => { flash.style.opacity = '0'; }, 220);
+          CosmicAudio.novaComm(
+            'ดาวฤกษ์รุ่นแรกสีฟ้าขาวส่องสว่างทั่วเอกภพแล้ว! ตอบคำถาม Checkpoint เพื่อรับโบนัสคะแนนและฟื้นฟูเกราะครับ',
+            'ดาวฤกษ์รุ่นแรกส่องสว่างแล้วครับ ตอบคำถามเช็กพอยต์เรื่องแหล่งกำเนิดธาตุหนักเพื่อรับโบนัสและวาร์ปสู่ยุคกาแล็กซีครับ'
+          );
+          renderBridge2();
+        };
+        return;
+      }
+
+      dock.innerHTML = `
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="font-display font-semibold text-cosmos-gold">🌟 EVOLUTION CHECKPOINT (โบนัส +150 &amp; เกราะ +15%)</div>
+          <p class="text-white text-xs sm:text-sm">
+            ธาตุหนักกว่าฮีเลียม เช่น <b>คาร์บอน ออกซิเจน หรือเหล็ก</b> ในร่างกายเรา เกิดขึ้นจากกระบวนการใด?
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+            <button data-b2="bb" class="b2-ans py-2 px-2 rounded-xl bg-cosmos-deep border border-slate-600 font-display text-xs active:scale-95">เกิดพร้อมบิกแบงทันที</button>
+            <button data-b2="star" class="b2-ans py-2 px-2 rounded-xl bg-cosmos-deep border border-slate-600 font-display text-xs active:scale-95">ฟิวชันในดาวฤกษ์ &amp; ซูเปอร์โนวา</button>
+            <button data-b2="cmb" class="b2-ans py-2 px-2 rounded-xl bg-cosmos-deep border border-slate-600 font-display text-xs active:scale-95">จากรังสีไมโครเวฟ CMB</button>
+          </div>
+        </div>
+      `;
+
+      dock.querySelectorAll('.b2-ans').forEach(btn => {
+        btn.onclick = () => {
+          if (btn.dataset.b2 === 'star') {
+            CosmicAudio.fanfare();
+            addScore(150);
+            restoreShield(15);
+            triggerJumpGate(() => enterPhase('stage3'));
+          } else {
+            damageShield(10, 'บิกแบงสร้างเพียงธาตุเบา (H, He และลิเทียมเล็กน้อย) ส่วนธาตุหนักอย่างคาร์บอน ออกซิเจน และเหล็ก ล้วนถูกสังเคราะห์ขึ้นจาก <b>ฟิวชันในแกนกลางดาวฤกษ์และการระเบิดซูเปอร์โนวา</b> ครับ!');
+          }
+        };
+      });
+    }
+
+    /* ===================================================================== */
+    /* STAGE 3 (EPOCH 7): GALAXY FORMATION, SUPERNOVAE & DISTANCE MODULUS    */
+    /* ===================================================================== */
+    function lockStage3Beacon(id) {
+      CosmicAudio.lockBeep();
+      State.s3LockedSet.add(id);
+      State.s3ActiveIdx = id;
+      const t = State.s3Targets[id];
+      showToast(`🎯 ล็อกเป้า ${t.name} สำเร็จ!`, 'success');
+      CosmicAudio.novaComm(
+        `สแกน ${t.name} สำเร็จ! m = ${t.m}, M = ${t.M} คำนวณระยะทาง d (หน่วย Mpc) ด้วยสูตร m − M = 5 log₁₀(d_pc) − 5 เลยครับ`,
+        'ล็อกเป้าซูเปอร์โนวาสำเร็จครับ นำค่าโชติมาตรที่วัดได้ไปคำนวณระยะทางในหน่วยเมกะพาร์เซกได้เลยครับ'
+      );
+      renderStage3();
+    }
+
+    function renderStage3() {
+      const dock = document.getElementById('mission-dock');
+      const allSolved = State.s3SolvedSet.size === 2;
+
+      if (allSolved && !State.s3BonusDone) {
+        dock.innerHTML = `
+          <div class="space-y-2 text-xs sm:text-sm">
+            <div class="font-display font-semibold text-cosmos-gold">⚡ BONUS: กฎกำลังสองผกผัน (F = L / 4πd²)</div>
+            <p class="text-slate-100 text-xs sm:text-sm">
+              ซูเปอร์โนวาชนิด Ia มีกำลังส่องสว่างจริง (L) เท่ากันทุกดวง หากซูเปอร์โนวา B อยู่ไกลกว่า A เป็น <b>2 เท่า</b> ความสว่างปรากฏ (F) จะลดลงกี่เท่า?
+            </p>
+            <div class="grid grid-cols-3 gap-2">
+              <button data-inv="2" class="inv-btn py-2.5 rounded-xl bg-cosmos-deep border border-slate-600 font-display font-semibold active:scale-95">2 เท่า</button>
+              <button data-inv="4" class="inv-btn py-2.5 rounded-xl bg-cosmos-deep border border-slate-600 font-display font-semibold active:scale-95">4 เท่า</button>
+              <button data-inv="8" class="inv-btn py-2.5 rounded-xl bg-cosmos-deep border border-slate-600 font-display font-semibold active:scale-95">8 เท่า</button>
+            </div>
+          </div>
+        `;
+        dock.querySelectorAll('.inv-btn').forEach(btn => {
+          btn.onclick = () => {
+            if (btn.dataset.inv === '4') {
+              State.s3BonusDone = true;
+              CosmicAudio.fanfare();
+              addScore(150);
+              showInfoModal({
+                badge: '✓ EPOCH 7 COMPLETE • COSMIC DISTANCE LADDER',
+                title: 'พิชิตบันไดระยะทางจักรวาลสำเร็จ!',
+                bodyHtml: `
+                  <div class="font-sci text-xs bg-black/60 p-3 rounded-xl border-l-4 border-cosmos-cyan text-cosmos-cyan">
+                    m − M = 5 log₁₀(d_pc) − 5  |  F = L / (4πd²)
+                  </div>
+                  <p>เมื่อระยะทางเพิ่มเป็น 2 เท่า ความสว่างจะลดลง <b>2² = 4 เท่า</b> เตรียมวาร์ปผ่านเหตุการณ์สำคัญ <b>กำเนิดระบบสุริยะ (Epoch 8)</b> สู่เอกภพปัจจุบัน!</p>
+                `,
+                btnText: '🌀 วาร์ปสู่ยุคกำเนิดระบบสุริยะ (9.2 พันล้านปี)',
+                spokenThai: 'ถูกต้องครับ ความสว่างลดลงสี่เท่าตามกฎกำลังสองผกผัน เตรียมวาร์ปเข้าสู่ยุคกำเนิดระบบสุริยะของเราครับ',
+                onConfirm: () => triggerJumpGate(() => enterPhase('bridge3'))
+              });
+            } else {
+              damageShield(15, 'จากกฎกำลังสองผกผัน <b>F = L / (4πd²)</b> ความสว่างแปรผกผันกับระยะทาง <b>ยกกำลังสอง</b> ดังนั้นถ้าระยะทางเพิ่มเป็น 2 เท่า ความสว่างจะลดลง 2² = 4 เท่าครับ');
+            }
+          };
+        });
+        return;
+      }
+
+      const activeT = State.s3ActiveIdx >= 0 ? State.s3Targets[State.s3ActiveIdx] : null;
+      const activeSolved = activeT && State.s3SolvedSet.has(activeT.id);
+
+      dock.innerHTML = `
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-display font-semibold text-cosmos-cyan">🎯 EPOCH 7: ล่าเทียนมาตรฐาน (${State.s3SolvedSet.size}/2)</span>
+            <button id="btn-s3-lock" class="px-3 py-1 rounded-xl text-xs btn-guardian active:scale-95">📡 ล็อกเป้า (LOCK)</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            ${State.s3Targets.map(t => {
+              const solved = State.s3SolvedSet.has(t.id);
+              const locked = State.s3LockedSet.has(t.id);
+              return `
+                <button data-pick-sn="${t.id}" class="py-1.5 px-2.5 rounded-xl text-xs font-display border text-left transition active:scale-95 ${
+                  solved ? 'bg-emerald-950/70 border-cosmos-plasma text-cosmos-plasma'
+                  : (State.s3ActiveIdx === t.id ? 'bg-cosmos-magenta/25 border-cosmos-gold text-white' : 'bg-cosmos-deep/80 border-slate-600 text-slate-300')
+                }">
+                  ${solved ? '✓' : (locked ? '📡' : '🔍')} ${t.name}
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          ${activeT && !activeSolved ? `
+            <div class="p-2 rounded-xl bg-black/55 border border-cosmos-cyan/40 space-y-0.5">
+              <div class="flex justify-between font-sci text-[11px]">
+                <span class="text-cosmos-gold">${activeT.name}</span>
+                <span class="text-cosmos-cyan">m = ${activeT.m} | M = ${activeT.M}</span>
+              </div>
+              <div class="font-sci text-[10px] text-slate-300">m − M = 5 log₁₀(d_pc) − 5  (1 Mpc = 10⁶ pc)</div>
+            </div>
+            <div class="flex gap-2">
+              <input id="s3-dist-input" type="number" placeholder="คำนวณ d (หน่วย Mpc)"
+                class="flex-1 px-3 py-2 rounded-xl bg-cosmos-bg border border-cosmos-cyan/60 font-sci text-sm text-white focus:outline-none focus:border-cosmos-gold" />
+              <span class="flex items-center px-1 font-sci text-xs text-slate-300">Mpc</span>
+              <button id="btn-s3-check" class="px-4 py-2 rounded-xl text-xs sm:text-sm btn-cyan active:scale-95">ยืนยัน</button>
+            </div>
+          ` : `
+            <p class="text-xs text-center text-slate-300">หมุนมุมมองเล็งเป้าไปที่ซูเปอร์โนวาแล้วกด <b>LOCK</b> (หรือแตะชื่อด้านบน)</p>
+          `}
+        </div>
+      `;
+
+      document.getElementById('btn-s3-lock').onclick = () => {
+        if (State.s3AimedIdx !== -1) {
+          lockStage3Beacon(State.s3AimedIdx);
+        } else {
+          const nextId = State.s3SolvedSet.has(0) ? 1 : 0;
+          Look.targetLon = nextId === 0 ? -21 : 21;
+          Look.targetLat = 4;
+          showToast('กำลังหันยานไปหาซูเปอร์โนวา... กด LOCK อีกครั้งเพื่อสแกน!', 'info');
+        }
+      };
+
+      dock.querySelectorAll('[data-pick-sn]').forEach(btn => {
+        btn.onclick = () => {
+          const id = Number(btn.dataset.pickSn);
+          Look.targetLon = id === 0 ? -21 : 21;
+          lockStage3Beacon(id);
+        };
+      });
+
+      const chkBtn = document.getElementById('btn-s3-check');
+      if (chkBtn && activeT) {
+        chkBtn.onclick = () => {
+          const val = parseFloat(document.getElementById('s3-dist-input').value);
+          if (!isNaN(val) && Math.abs(val - activeT.dMpc) <= Math.max(0.1, activeT.dMpc * 0.08)) {
+            CosmicAudio.fanfare();
+            State.s3SolvedSet.add(activeT.id);
+            addScore(180);
+            if (State.s3SolvedSet.size === 2) {
+              CosmicAudio.novaComm(
+                'คำนวณครบทั้ง 2 ซูเปอร์โนวาแล้ว! ตอบคำถามโบนัสกฎกำลังสองผกผันอีกข้อเพื่อเปิดประตูวาร์ปครับ',
+                'เยี่ยมมากครับ วัดระยะทางครบทั้งสองแห่งแล้ว ตอบคำถามโบนัสกฎกำลังสองผกผันอีกข้อครับ'
+              );
+            } else {
+              State.s3ActiveIdx = -1;
+              CosmicAudio.novaComm(
+                `ถูกต้อง! ${activeT.name} อยู่ห่างออกไป ${activeT.dMpc} Mpc สแกนซูเปอร์โนวาอีกแห่งต่อเลยครับ`,
+                'ถูกต้องครับ ตอนนี้หันไปสแกนซูเปอร์โนวาอีกแห่งต่อได้เลยครับ'
+              );
+            }
+            renderStage3();
+          } else {
+            const diff = activeT.m - activeT.M;
+            const exp = (diff + 5) / 5;
+            damageShield(15, `ลองแทนค่าทีละขั้น:<br>1) m − M = ${activeT.m} − (${activeT.M}) = <b>${diff}</b><br>2) log₁₀(d_pc) = (${diff} + 5) / 5 = <b>${exp}</b><br>3) ดังนั้น d = 10<sup>${exp}</sup> pc แปลงเป็น Mpc (หารด้วย 10⁶) จะได้ <b>10<sup>${exp - 6}</sup> Mpc</b> ครับ!`);
+          }
+        };
+      }
+    }
+
+    /* ===================================================================== */
+    /* BRIDGE 3 (EPOCH 8): SOLAR SYSTEM BIRTH MILESTONE (9.2 BILLION YEARS)  */
+    /* ===================================================================== */
+    function renderBridge3() {
+      const dock = document.getElementById('mission-dock');
+      dock.innerHTML = `
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-display font-semibold text-cosmos-gold">🪐 EPOCH 8 MILESTONE: กำเนิดระบบสุริยะ</span>
+            <span class="font-sci text-[10px] text-cosmos-cyan">9.2 พันล้านปี (4.6 พันล้านปีก่อน)</span>
+          </div>
+          <p class="text-xs text-slate-200 leading-relaxed">
+            ธาตุหนักจากซูเปอร์โนวารุ่นก่อนรวมตัวเป็น <b>เนบิวลาสุริยะ</b> แล้วยุบตัวก่อกำเนิด <b>ดวงอาทิตย์ โลก และดาวเคราะห์</b> ที่คุณเห็นหมุนอยู่ตรงหน้า! พร้อมวาร์ปเข้าสู่ด่านสุดท้ายหรือยัง?
+          </p>
+          <button id="btn-b3-warp" class="w-full py-3 rounded-2xl text-sm btn-guardian active:scale-95">
+            🌀 วาร์ปสู่ด่านสุดท้าย: เอกภพปัจจุบัน (13.8 พันล้านปี)
+          </button>
+        </div>
+      `;
+
+      document.getElementById('btn-b3-warp').onclick = () => {
+        CosmicAudio.fanfare();
+        addScore(100);
+        triggerJumpGate(() => enterPhase('stage4'));
+      };
+    }
+
+    /* ===================================================================== */
+    /* STAGE 4 (EPOCH 9): REDSHIFT, LIVE HUBBLE DIAGRAM & AGE OF UNIVERSE    */
+    /* ===================================================================== */
+    function selectStage4Galaxy(id) {
+      CosmicAudio.lockBeep();
+      State.s4SelectedId = id;
+      const g = State.s4Galaxies[id];
+
+      if (id === 2 && State.s4Plotted.has(0) && State.s4Plotted.has(1) && !State.s4Plotted.has(2)) {
+        State.s4Plotted.add(2);
+        CosmicAudio.fanfare();
+        addScore(120);
+        CosmicAudio.novaComm(
+          'สแกน Galaxy Gamma สำเร็จ! จุดทั้ง 3 เรียงเป็นเส้นตรงตามกฎของฮับเบิลแล้ว หาความชัน H₀ เพื่อคำนวณอายุเอกภพได้เลย!',
+          'สแกนกาแล็กซีแกมมาสำเร็จครับ ข้อมูลทั้งสามจุดเรียงตัวเป็นเส้นตรงตามกฎของฮับเบิลแล้ว ตอนนี้หาค่าคงตัวฮับเบิลได้เลยครับ'
+        );
+      } else if (!State.s4Plotted.has(id)) {
+        CosmicAudio.novaComm(
+          `สแกน Galaxy ${g.name} (d = ${g.d} Mpc) พบสเปกตรัมเลื่อนไปทางแดง +${g.dLam} nm จาก λ₀ = 600 nm คำนวณความเร็ว v (km/s) เลยครับ!`,
+          `สแกนกาแล็กซี ${g.name} สำเร็จครับ นำค่าการเลื่อนไปทางแดงมาคำนวณความเร็วถอยห่างได้เลยครับ`
+        );
+      }
+      renderStage4();
+    }
+
+    function renderStage4() {
+      const dock = document.getElementById('mission-dock');
+      const allPlotted = State.s4Plotted.size === 3;
+      const sel = State.s4SelectedId >= 0 ? State.s4Galaxies[State.s4SelectedId] : null;
+      const selPlotted = sel && State.s4Plotted.has(sel.id);
+      const expectedAge = Number((977.8 / State.s4H0True).toFixed(1));
+
+      dock.innerHTML = `
+        <div class="space-y-2 text-xs sm:text-sm">
+          <div class="grid grid-cols-3 gap-1.5">
+            ${State.s4Galaxies.map(g => {
+              const done = State.s4Plotted.has(g.id);
+              return `
+                <button data-s4-gal="${g.id}" class="py-1.5 px-2 rounded-xl text-xs font-display font-semibold border transition active:scale-95 ${
+                  done ? 'bg-emerald-950/70 border-cosmos-plasma text-cosmos-plasma'
+                  : (State.s4SelectedId === g.id ? 'bg-cosmos-magenta/30 border-cosmos-gold text-white' : 'bg-cosmos-deep/85 border-cosmos-cyan/40 text-cosmos-cyan')
+                }">
+                  ${done ? '✓' : '📡'} ${g.name}
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div class="p-2 rounded-xl bg-black/60 border border-white/15 space-y-1">
+              <div class="flex justify-between text-[11px]">
+                <span class="font-display text-slate-300">สเปกตรัมดูดกลืน (λ₀ = 600 nm)</span>
+                <span class="font-sci text-cosmos-magenta">${sel ? 'Δλ = +' + sel.dLam + ' nm' : 'เลือกกาแล็กซี'}</span>
+              </div>
+              <div class="relative h-4 rounded spectrum-bar border border-white/25 overflow-hidden">
+                <div class="absolute top-0 bottom-0 w-0.5 bg-white" style="left: 48%;"></div>
+                ${sel ? `<div class="absolute top-0 bottom-0 w-1.5 bg-black border-x border-white" style="left: ${Math.min(93, 48 + sel.dLam * 0.92)}%;"></div>` : ''}
+              </div>
+              <div class="flex justify-between font-sci text-[10px] text-slate-400">
+                <span>แล็บ: 600 nm</span>
+                <span class="text-cosmos-gold">${sel ? 'วัดได้: ' + (600 + sel.dLam).toFixed(1) + ' nm' : ''}</span>
+              </div>
+            </div>
+
+            <div class="p-1 rounded-xl bg-black/60 border border-cosmos-plasma/35">
+              <canvas id="hubble-graph" class="w-full h-22 rounded"></canvas>
+            </div>
+          </div>
+
+          ${!allPlotted ? (
+            sel && !selPlotted ? `
+              <div class="space-y-1">
+                <div class="font-sci text-[10px] sm:text-[11px] text-cosmos-cyan">
+                  v = c · (Δλ / λ₀) = (3×10⁵) × (${sel.dLam} / 600)
+                </div>
+                <div class="flex gap-2">
+                  <input id="s4-v-input" type="number" placeholder="คำนวณความเร็ว v (km/s)"
+                    class="flex-1 px-3 py-1.5 rounded-xl bg-cosmos-bg border border-cosmos-cyan/60 font-sci text-sm text-white focus:outline-none focus:border-cosmos-gold" />
+                  <span class="flex items-center font-sci text-xs text-slate-300">km/s</span>
+                  <button id="btn-s4-check-v" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm btn-cyan active:scale-95">พล็อตกราฟ</button>
+                </div>
+              </div>
+            ` : `
+              <p class="text-xs text-center text-slate-300">
+                แตะเลือก <b>Alpha</b> และ <b>Beta</b> เพื่อคำนวณความเร็วลงกราฟ แล้วแตะ <b>Gamma</b> เพื่อยืนยันเส้นแนวโน้ม!
+              </p>
+            `
+          ) : (
+            !State.s4HubbleSolved ? `
+              <div class="pt-1 border-t border-white/15 space-y-1.5">
+                <div class="font-display font-semibold text-cosmos-gold text-xs">
+                  👑 FINAL BOSS (1/2): จากกราฟ v = H₀·d ความชันค่าคงตัวฮับเบิล H₀ = v/d เท่ากับเท่าไร?
+                </div>
+                <div class="flex gap-2">
+                  <input id="s4-h0-input" type="number" placeholder="เช่น ${State.s4Galaxies[0].v} ÷ 100"
+                    class="flex-1 px-3 py-1.5 rounded-xl bg-cosmos-bg border border-cosmos-gold/70 font-sci text-sm text-white focus:outline-none" />
+                  <span class="flex items-center font-sci text-[10px] text-slate-300">km/s/Mpc</span>
+                  <button id="btn-s4-check-h0" class="px-3.5 py-1.5 rounded-xl text-xs btn-guardian active:scale-95">ยืนยัน H₀</button>
+                </div>
+              </div>
+            ` : `
+              <div class="pt-1 border-t border-white/15 space-y-1.5">
+                <div class="font-display font-semibold text-cosmos-plasma text-xs">
+                  👑 FINAL BOSS (2/2): เมื่อ H₀ = ${State.s4H0True} km/s/Mpc คำนวณอายุเอกภพ t_H ≈ 977.8 / H₀ (หน่วยพันล้านปี)
+                </div>
+                <div class="flex gap-2">
+                  <input id="s4-age-input" type="number" step="0.1" placeholder="เช่น ${expectedAge}"
+                    class="flex-1 px-3 py-1.5 rounded-xl bg-cosmos-bg border border-cosmos-plasma/70 font-sci text-sm text-white focus:outline-none" />
+                  <span class="flex items-center font-display text-xs text-slate-300">พันล้านปี</span>
+                  <button id="btn-s4-check-age" class="px-3.5 py-1.5 rounded-xl text-xs btn-guardian active:scale-95">ปิดภารกิจ!</button>
+                </div>
+              </div>
+            `
+          )}
+        </div>
+      `;
+
+      dock.querySelectorAll('[data-s4-gal]').forEach(btn => {
+        btn.onclick = () => selectStage4Galaxy(Number(btn.dataset.s4Gal));
+      });
+
+      drawHubbleGraph();
+
+      const chkV = document.getElementById('btn-s4-check-v');
+      if (chkV && sel) {
+        chkV.onclick = () => {
+          const val = parseFloat(document.getElementById('s4-v-input').value);
+          if (!isNaN(val) && Math.abs(val - sel.v) <= sel.v * 0.06) {
+            CosmicAudio.fanfare();
+            State.s4Plotted.add(sel.id);
+            addScore(180);
+            if (State.s4Plotted.has(0) && State.s4Plotted.has(1) && !State.s4Plotted.has(2)) {
+              CosmicAudio.novaComm(
+                'พล็อตครบ 2 จุดแล้ว! แตะสแกน Galaxy Gamma เพื่อยืนยันเส้นแนวโน้มกฎของฮับเบิลได้เลยครับ',
+                'เยี่ยมมากครับ แตะสแกนกาแล็กซีแกมมาเพื่อยืนยันเส้นแนวโน้มกฎของฮับเบิลได้เลยครับ'
+              );
+            }
+            renderStage4();
+          } else {
+            damageShield(15, `ลองคำนวณ <b>v = 300,000 × (${sel.dLam} / 600)</b> (กดเปิดเครื่องคิดเลขด้านบน โดย 300,000 ÷ 600 = 500 แล้วคูณด้วย ${sel.dLam} ครับ!)`);
+          }
+        };
+      }
+
+      const chkH0 = document.getElementById('btn-s4-check-h0');
+      if (chkH0) {
+        chkH0.onclick = () => {
+          const val = parseFloat(document.getElementById('s4-h0-input').value);
+          if (!isNaN(val) && Math.abs(val - State.s4H0True) <= 2) {
+            CosmicAudio.fanfare();
+            State.s4HubbleSolved = true;
+            addScore(200);
+            CosmicAudio.novaComm(
+              `แม่นยำมาก! H₀ = ${State.s4H0True} km/s/Mpc ขั้นสุดท้าย: ใช้สูตร 977.8 ÷ ${State.s4H0True} หาอายุเอกภพ (พันล้านปี) เพื่อกลับบ้าน!`,
+              'ถูกต้องครับ ขั้นสุดท้าย นำเก้าร้อยเจ็ดสิบเจ็ดจุดแปดหารด้วยค่าคงตัวฮับเบิลเพื่อหาอายุของเอกภพในหน่วยพันล้านปีครับ'
+            );
+            renderStage4();
+          } else {
+            damageShield(15, `จากกฎของฮับเบิล <b>H₀ = v / d</b> ลองนำค่าของ Galaxy Alpha (${State.s4Galaxies[0].v} ÷ 100) มาหารกันดูสิครับ!`);
+          }
+        };
+      }
+
+      const chkAge = document.getElementById('btn-s4-check-age');
+      if (chkAge) {
+        chkAge.onclick = () => {
+          const val = parseFloat(document.getElementById('s4-age-input').value);
+          if (!isNaN(val) && Math.abs(val - expectedAge) <= 0.8) {
+            CosmicAudio.fanfare();
+            addScore(300);
+            triggerJumpGate(() => showMissionCertificate());
+          } else {
+            damageShield(15, `ใช้เครื่องคิดเลขในเกมกด <b>${State.s4H0True}</b> แล้วกดปุ่ม <b>977.8÷x</b> จะได้อายุเอกภพประมาณ <b>${expectedAge} พันล้านปี</b> ครับ!`);
+          }
+        };
+      }
+    }
+
+    function drawHubbleGraph() {
+      const canvas = document.getElementById('hubble-graph');
+      if (!canvas) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const W = rect.width, H = rect.height;
+      const pL = 32, pR = 12, pT = 10, pB = 18;
+
+      ctx.fillStyle = '#060214';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(pL, pT); ctx.lineTo(pL, H - pB); ctx.lineTo(W - pR, H - pB);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '9px Orbitron, monospace';
+      ctx.fillText('v', 8, 13);
+      ctx.fillText('d(Mpc)', W - 44, H - 4);
+
+      const toX = d => pL + (d / 340) * (W - pL - pR);
+      const toY = v => (H - pB) - (v / 25000) * (H - pT - pB);
+
+      if (State.s4Plotted.size === 3) {
+        ctx.strokeStyle = '#38f9a8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(toX(0), toY(0));
+        ctx.lineTo(toX(320), toY(State.s4H0True * 320));
+        ctx.stroke();
+        ctx.fillStyle = '#38f9a8';
+        ctx.fillText('v = H₀d', toX(160), toY(State.s4H0True * 265));
+      }
+
+      State.s4Galaxies.forEach(g => {
+        if (!State.s4Plotted.has(g.id)) return;
+        const x = toX(g.d), y = toY(g.v);
+        ctx.fillStyle = '#' + g.color.toString(16).padStart(6, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      });
+    }
+
+    /*************************************************************************
+     * 10. GRAND FINALE CERTIFICATE + PNG DOWNLOAD GENERATOR
+     *************************************************************************/
+    function showMissionCertificate() {
+      State.mode = 'complete';
+      document.getElementById('cert-name').textContent = State.pilotName;
+      document.getElementById('cert-score').textContent = State.score.toLocaleString();
+      document.getElementById('cert-shield').textContent = `${State.shield}%`;
+      const rank = State.shield >= 85 ? 'S' : (State.shield >= 55 ? 'A' : 'B');
+      document.getElementById('cert-rank').textContent = rank;
+
+      const screen = document.getElementById('certificate-screen');
+      screen.classList.remove('hidden');
+      screen.classList.add('flex');
+
+      CosmicAudio.speakNaturalThai(`ภารกิจสำเร็จสมบูรณ์แล้วครับกัปตัน ${State.pilotName} คุณได้ปลดล็อกวิวัฒนาการเอกภพครบทั้งเก้ายุค และพิชิตสมการฟิสิกส์ครบทุกด่านแล้วครับ`);
+    }
+
+    function downloadCertificatePNG() {
+      try {
+        const c = document.createElement('canvas');
+        c.width = 1080;
+        c.height = 760;
+        const ctx = c.getContext('2d');
+
+        // Background Nebula Gradient
+        const bg = ctx.createLinearGradient(0, 0, 1080, 760);
+        bg.addColorStop(0, '#09031c');
+        bg.addColorStop(0.5, '#1b0742');
+        bg.addColorStop(1, '#060214');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, 1080, 760);
+
+        // Glowing Nebula Accents
+        const drawOrb = (x, y, r, color) => {
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, color);
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        };
+        drawOrb(180, 150, 260, 'rgba(255, 46, 151, 0.28)');
+        drawOrb(920, 620, 300, 'rgba(0, 245, 212, 0.24)');
+        drawOrb(540, 380, 340, 'rgba(123, 44, 191, 0.22)');
+
+        // Gold Border Frame
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(36, 36, 1008, 688);
+        ctx.strokeStyle = 'rgba(0, 245, 212, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(50, 50, 980, 660);
+
+        // Titles
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 24px Orbitron, sans-serif';
+        ctx.fillText('STAR-LORD OF COSMOLOGY • COSMICGENESIS AR 4.0', 540, 118);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 46px Kanit, sans-serif';
+        ctx.fillText('ใบรับรองผู้พิทักษ์แห่งปฐมบทเอกภพ', 540, 182);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '24px Sarabun, sans-serif';
+        ctx.fillText('ขอมอบประกาศนียบัตรนี้ให้แก่กัปตัน', 540, 236);
+
+        ctx.fillStyle = '#00f5d4';
+        ctx.font = 'bold 44px Kanit, sans-serif';
+        ctx.fillText(State.pilotName, 540, 298);
+
+        // Stats Row
+        const rank = State.shield >= 85 ? 'S' : (State.shield >= 55 ? 'A' : 'B');
+        ctx.fillStyle = 'rgba(19, 6, 46, 0.85)';
+        ctx.fillRect(120, 336, 840, 106);
+        ctx.strokeStyle = 'rgba(255, 209, 102, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(120, 336, 840, 106);
+
+        const stats = [
+          { label: 'ระดับยศ', val: rank, x: 240, col: '#ffd166' },
+          { label: 'คะแนนรวม', val: State.score.toLocaleString(), x: 460, col: '#38f9a8' },
+          { label: 'เกราะคงเหลือ', val: `${State.shield}%`, x: 680, col: '#00f5d4' },
+          { label: 'วิวัฒนาการ', val: '9 / 9 ยุค', x: 865, col: '#ff2e97' }
+        ];
+        stats.forEach(s => {
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '18px Sarabun, sans-serif';
+          ctx.fillText(s.label, s.x, 372);
+          ctx.fillStyle = s.col;
+          ctx.font = 'bold 34px Orbitron, Kanit, sans-serif';
+          ctx.fillText(s.val, s.x, 420);
+        });
+
+        // Mastered Equations & 9 Epochs
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 22px Kanit, sans-serif';
+        ctx.fillText('พิชิตครบ 9 ยุควิวัฒนาการเอกภพ (t = 0 → 13.8 พันล้านปี) และ 4 สมการหลัก ม.6', 540, 492);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '20px Sarabun, sans-serif';
+        ctx.fillText('1. สมการฟรีดแมน (Ω = 1, k = 0)   •   2. กฎการกระจัดของวีน (λ_max = b/T ≈ 1.06 mm)', 540, 540);
+        ctx.fillText('3. มอดูลัสระยะทาง & กฎกำลังสองผกผัน (m−M = 5log d − 5)   •   4. กฎของฮับเบิล (v = H₀d)', 540, 580);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '18px Sarabun, sans-serif';
+        const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        ctx.fillText(`วันที่ผ่านภารกิจ: ${dateStr} • โลก ดาราศาสตร์ และอวกาศ ชั้นมัธยมศึกษาปีที่ 6`, 540, 666);
+
+        const link = document.createElement('a');
+        link.download = `CosmicGenesis_AR4_${State.pilotName.replace(/\s+/g, '_')}.png`;
+        link.href = c.toDataURL('image/png');
+        link.click();
+        showToast('💾 บันทึกภาพใบรับรอง PNG เรียบร้อยแล้ว!', 'success');
+      } catch (e) {
+        showToast('ไม่สามารถบันทึกภาพอัตโนมัติได้ สามารถแคปหน้าจอส่งครูได้เลยครับ', 'info');
+      }
+    }
+
+    function replayGame() {
+      CosmicAudio.click();
+      CosmicAudio.stopSpeech();
+      document.getElementById('certificate-screen').classList.add('hidden');
+      document.getElementById('certificate-screen').classList.remove('flex');
+
+      State.shield = 100;
+      State.score = 0;
+      State.combo = 1;
+      State.unlockedEpochs = new Set([1]);
+      State.activeEpoch = 1;
+
+      State.s1Ignited = false;
+      State.s1Charge = 0;
+      s1Expand = 0.08;
+      if (s1Grid) s1Grid.visible = false;
+      if (s1Burst) s1Burst.visible = false;
+
+      State.b1Fused = false;
+      State.s2Scale = 0;
+      State.s2Cleared = false;
+      State.s2WienSolved = false;
+      State.b2Collapsed = false;
+
+      State.s3LockedSet = new Set();
+      State.s3SolvedSet = new Set();
+      State.s3ActiveIdx = -1;
+      State.s3BonusDone = false;
+
+      State.s4SelectedId = -1;
+      State.s4Plotted = new Set();
+      State.s4HubbleSolved = false;
+
+      initRandomizedPuzzles();
+      // Rebuild stage 3 & 4 scenes with new randomized values
+      scene.remove(sceneGroups.stage3);
+      scene.remove(sceneGroups.stage4);
+      buildStage3Scene();
+      buildStage4Scene();
+
+      updateTelemetryHUD();
+      State.mode = 'playing';
+      enterPhase('stage1');
+    }
+
+    /*************************************************************************
+     * 11. SCIENTIFIC CALCULATOR ENGINE
+     *************************************************************************/
+    const Calc = {
+      expr: '',
+      press(key) {
+        CosmicAudio.click();
+        const disp = document.getElementById('calc-display');
+        const expEl = document.getElementById('calc-expr');
+
+        if (key === 'C') {
+          this.expr = '';
+          disp.textContent = '0';
+          expEl.textContent = '';
+          return;
+        }
+        if (key === 'DEL') {
+          this.expr = this.expr.slice(0, -1);
+          disp.textContent = this.expr || '0';
+          return;
+        }
+        if (key === 'c_val') {
+          this.expr += '300000';
+          disp.textContent = this.expr;
+          return;
+        }
+        if (key === 'b_val') {
+          this.expr += '0.002898';
+          disp.textContent = this.expr;
+          return;
+        }
+        if (key === 'h_age') {
+          try {
+            const v = Function(`"use strict"; return (${this.expr || '70'})`)();
+            if (v > 0) {
+              const res = Number((977.8 / v).toFixed(2));
+              expEl.textContent = `977.8 / ${v}`;
+              this.expr = String(res);
+              disp.textContent = this.expr;
+            }
+          } catch (e) { disp.textContent = 'Error'; }
+          return;
+        }
+        if (key === 'log10') {
+          try {
+            const v = Function(`"use strict"; return (${this.expr || '0'})`)();
+            if (v > 0) {
+              const res = Number(Math.log10(v).toFixed(4));
+              expEl.textContent = `log₁₀(${v})`;
+              this.expr = String(res);
+              disp.textContent = this.expr;
+            }
+          } catch (e) { disp.textContent = 'Error'; }
+          return;
+        }
+        if (key === 'pow10') {
+          try {
+            const v = Function(`"use strict"; return (${this.expr || '0'})`)();
+            const res = Math.pow(10, v);
+            expEl.textContent = `10^(${v})`;
+            this.expr = String(Number(res.toPrecision(6)));
+            disp.textContent = this.expr;
+          } catch (e) { disp.textContent = 'Error'; }
+          return;
+        }
+        if (key === '=') {
+          try {
+            const clean = this.expr.replace(/[^0-9+\-*/.()eE]/g, '');
+            if (!clean) return;
+            const res = Function(`"use strict"; return (${clean})`)();
+            expEl.textContent = `${this.expr} =`;
+            this.expr = String(Number(res.toPrecision(7)));
+            disp.textContent = this.expr;
+          } catch (e) {
+            disp.textContent = 'Error';
+            this.expr = '';
+          }
+          return;
+        }
+        this.expr += key;
+        disp.textContent = this.expr;
+      }
+    };
+
+    function toggleMissionDock() {
+      State.dockCollapsed = !State.dockCollapsed;
+      document.getElementById('mission-dock').classList.toggle('hidden', State.dockCollapsed);
+      document.getElementById('btn-toggle-dock').textContent = State.dockCollapsed ? '▲ เปิดแผงภารกิจ' : '▼ ซ่อน/แสดงแผงภารกิจ';
+    }
+
+    /*************************************************************************
+     * 12. BOOTSTRAP & EVENT WIRING
+     *************************************************************************/
+    async function launchMission(openAR) {
+      const nameVal = document.getElementById('pilot-name-input').value.trim();
+      State.pilotName = nameVal || 'นักจักรวาลวิทยา ม.6';
+      CosmicAudio.musicOn = document.getElementById('start-music-toggle').checked;
+      CosmicAudio.voiceOn = document.getElementById('start-voice-toggle').checked;
+      CosmicAudio.init();
+      CosmicAudio.syncAudioUI();
+      if (CosmicAudio.musicOn) CosmicAudio.startMusic();
+      CosmicAudio.click();
+
+      document.getElementById('start-screen').classList.add('hidden');
+      if (openAR) await toggleARCamera(true);
+      startIntro();
+    }
+
+    window.onload = function () {
+      initRandomizedPuzzles();
+      initThree();
+      animate();
+      renderEpochTimeline();
+
+      if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+
+      // Start Screen
+      document.getElementById('btn-launch-3d').onclick = () => launchMission(false);
+      document.getElementById('btn-launch-ar').onclick = () => launchMission(true);
+
+      // Intro Controls
+      document.getElementById('btn-intro-next').onclick = () => {
+        CosmicAudio.click();
+        CosmicAudio.stopSpeech();
+        showIntroScene(State.introIdx + 1);
+      };
+      document.getElementById('btn-intro-skip').onclick = () => {
+        CosmicAudio.click();
+        finishIntro();
+      };
+
+      // Top Cockpit HUD Controls
+      document.getElementById('btn-ar-toggle').onclick = () => { CosmicAudio.click(); toggleARCamera(); };
+      document.getElementById('btn-cosmic-mix').onclick = () => {
+        CosmicAudio.click();
+        CosmicAudio.toggleMusic();
+        showToast(CosmicAudio.musicOn ? '🎵 เปิดเพลง COSMIC MIX VOL. 1' : '🔇 ปิดเพลงพื้นหลัง', 'info');
+      };
+      document.getElementById('btn-voice-toggle').onclick = () => {
+        CosmicAudio.toggleVoice();
+        showToast(CosmicAudio.voiceOn ? '🔊 เปิดเสียงพากย์ไทย NOVA-AI' : '🔇 ปิดเสียงพากย์ไทย', 'info');
+      };
+      document.getElementById('btn-gyro-toggle').onclick = () => { CosmicAudio.click(); toggleGyro(); };
+      document.getElementById('btn-reset-view').onclick = () => {
+        CosmicAudio.click();
+        resetView();
+        showToast('🎯 รีเซ็ตมุมมองกลับด้านหน้าแล้ว', 'info');
+      };
+      document.getElementById('btn-hide-comm').onclick = () => {
+        document.getElementById('nova-comm-bar').classList.add('hidden');
+      };
+      document.getElementById('btn-toggle-dock').onclick = () => { CosmicAudio.click(); toggleMissionDock(); };
+
+      // Evolution Codex Modal
+      const codex = document.getElementById('codex-modal');
+      document.getElementById('btn-open-codex').onclick = () => {
+        CosmicAudio.click();
+        openEvolutionCodex(State.activeEpoch);
+      };
+      document.getElementById('btn-close-codex').onclick = () => {
+        CosmicAudio.click();
+        codex.classList.add('hidden');
+        codex.classList.remove('flex');
+      };
+      codex.onclick = (e) => {
+        if (e.target === codex) {
+          codex.classList.add('hidden');
+          codex.classList.remove('flex');
+        }
+      };
+
+      // Formula & Scientific Calculator Drawer
+      const drawer = document.getElementById('manual-drawer');
+      document.getElementById('btn-open-manual').onclick = () => {
+        CosmicAudio.click();
+        drawer.classList.remove('hidden');
+        drawer.classList.add('flex');
+      };
+      document.getElementById('btn-close-manual').onclick = () => {
+        CosmicAudio.click();
+        drawer.classList.add('hidden');
+        drawer.classList.remove('flex');
+      };
+      drawer.onclick = (e) => {
+        if (e.target === drawer) {
+          drawer.classList.add('hidden');
+          drawer.classList.remove('flex');
+        }
+      };
+
+      const tabF = document.getElementById('tab-formulas');
+      const tabC = document.getElementById('tab-calc');
+      const panelF = document.getElementById('panel-formulas');
+      const panelC = document.getElementById('panel-calc');
+
+      tabF.onclick = () => {
+        CosmicAudio.click();
+        panelF.classList.remove('hidden');
+        panelC.classList.add('hidden');
+        panelC.classList.remove('flex');
+        tabF.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-cosmos-cyan/25 text-cosmos-cyan border border-cosmos-cyan/50';
+        tabC.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-slate-900/70 text-slate-300 border border-slate-700';
+      };
+      tabC.onclick = () => {
+        CosmicAudio.click();
+        panelF.classList.add('hidden');
+        panelC.classList.remove('hidden');
+        panelC.classList.add('flex');
+        tabC.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-cosmos-gold/25 text-cosmos-gold border border-cosmos-gold/50';
+        tabF.className = 'py-2 rounded-xl font-display font-semibold text-xs bg-slate-900/70 text-slate-300 border border-slate-700';
+      };
+
+      document.querySelectorAll('.calc-btn').forEach(btn => {
+        btn.onclick = () => Calc.press(btn.dataset.calc);
+      });
+
+      // Certificate Actions
+      document.getElementById('btn-download-cert').onclick = downloadCertificatePNG;
+      document.getElementById('btn-replay').onclick = replayGame;
+    };
+  </script>
+</body>
+</html>
